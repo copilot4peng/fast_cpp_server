@@ -63,5 +63,18 @@ std::shared_ptr<oatpp::web::protocol::http::outgoing::Response> EdgesController:
     return ok("Task appended to edge successfully.");
 }
 
+std::shared_ptr<oatpp::web::protocol::http::outgoing::Response> EdgesController::getOnlineEdges() {
+    MYLOG_INFO("[API] 收到请求: GET /v1/edges/getOnlineEdges");
+
+    std::vector<std::string> online_edges;
+    my_edge::MyEdges::GetInstance().getOnlineEdges(online_edges);
+
+    auto result = oatpp::Vector<oatpp::String>::createShared();
+    for (const auto& edge_id : online_edges) {
+        result->push_back(edge_id.c_str());
+    }
+
+    return createDtoResponse(Status::CODE_200, result);
+}
 
 } // namespace my_api::edge

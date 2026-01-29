@@ -118,16 +118,6 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-start_mqtt() {
-  if [ "${MQTT_ENABLED}" = true ]; then
-    run_cmd "pgrep -x mosquitto >/dev/null 2>&1 && echo 'mosquitto already running' || true"
-    run_cmd "\"${MQTT_BIN}\" -c \"${MQTT_CONF}\" -d || true"
-    run_cmd "sleep 1"
-  fi
-}
-
-start_mqtt
-
 while true; do
   log_line info "Launching ${APP_NAME}..."
   if $DEBUG; then
@@ -143,7 +133,6 @@ while true; do
     wait "${APP_PID}" || true
     EXIT_CODE=$?
     log_line warn "APP exited code=${EXIT_CODE}, restart in 3s..."
-    start_mqtt
     sleep 3
   fi
 done

@@ -5,6 +5,7 @@
 #include "IEdge.h"
 #include "MyEdges.h"
 #include "MyEdge.h"
+#include "MyMqttBrokerManager.h"
 #include "MyAPI.h"
 #include "MyLog.h"
 #include <memory>
@@ -117,6 +118,9 @@ void Pipeline::Start() {
                     success_count++;
                 } else if (model_name == "edge") {
                     LaunchEdge(model_args);
+                    success_count++;
+                } else if (model_name == "MQTTBroker") {
+                    LaunchMyMqttBroker(model_args);
                     success_count++;
                 } else {
                     MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);
@@ -337,6 +341,20 @@ void Pipeline::LaunchEdge(const nlohmann::json& args) {
     } catch (const std::exception& e) {
         MYLOG_ERROR("启动 Edge 模块时捕获异常: {}", e.what());
     }
+}
+
+void Pipeline::LaunchMyMqttBroker(const nlohmann::json& args) {
+    MYLOG_INFO("启动 MQTT Broker 模块");
+    MYLOG_INFO("MQTT Broker 模块参数: {}", args.dump(4));
+    // 这里可以根据 args 创建和管理 MQTT Broker 实例
+    try {
+        my_mqtt_broker_manager::MyMqttBrokerManager::GetInstance().Init(args);
+        my_mqtt_broker_manager::MyMqttBrokerManager::GetInstance().Start();
+        MYLOG_INFO("成功启动 MQTT Broker 模块");
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("启动 MQTT Broker 模块时捕获异常: {}", e.what());
+    } 
+    return;
 }
 
 void Pipeline::Stop() {

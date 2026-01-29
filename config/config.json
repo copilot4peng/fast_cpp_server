@@ -87,6 +87,19 @@
                     "port": 9999
                 },
                 "model_name": "rest_api"
+            },
+            "4": {
+                "model_args": {
+                    "enable": true,
+                    "broker": {
+                        "port": 1883,
+                        "bin": "/home/cs/DockerRoot/fast_cpp_server/build/bin/mosquitto",
+                        "config": "/home/cs/DockerRoot/fast_cpp_server/config/mosquitto.conf",
+                        "log": "/home/cs/DockerRoot/fast_cpp_server/mosquitto.log",
+                        "foreground": true
+                    }
+                },
+                "model_name": "MQTTBroker"
             }
         }
     },

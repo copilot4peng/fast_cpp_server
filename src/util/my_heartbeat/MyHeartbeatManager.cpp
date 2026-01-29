@@ -51,7 +51,7 @@ void HeartbeatManager::WorkerLoop() {
     while (running_) {
         try {
             BuildHeartbeat();
-            SendHeartbeat(heartbeat_data_);
+            SendHeartbeat();
         } catch (const std::exception& e) {
             MYLOG_ERROR("Heartbeat error: {}", e.what());
         }
@@ -86,13 +86,13 @@ nlohmann::json HeartbeatManager::GetHeartbeatSnapshot() {
     return heartbeat_data_;
 }
 
-void HeartbeatManager::SendHeartbeat(const nlohmann::json& data) {
+void HeartbeatManager::SendHeartbeat() {
     std::string sender = config_.value("sender", "log");
     if (sender == "log") {
         if (simple_json4log) {
-            MYLOG_INFO("Heartbeat: {}", data["heartbeat"].dump());
+            MYLOG_INFO("Heartbeat: {}", this->heartbeat_data_["heartbeat"].dump());
         } else {
-            MYLOG_INFO("Heartbeat Data: {}", data.dump(4));
+            MYLOG_INFO("Heartbeat Data: {}", this->heartbeat_data_.dump(4));
         }
     }
     // http / mqtt 可在此扩展

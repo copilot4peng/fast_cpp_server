@@ -25,6 +25,11 @@ public:
              appendTaskToEdgeById, 
              REQUEST(std::shared_ptr<oatpp::web::protocol::http::incoming::Request>, request)
             );
+
+    ENDPOINT("GET", 
+             "/v1/edges/getOnlineEdges", 
+             getOnlineEdges
+            );
 };
 
 #include OATPP_CODEGEN_END(ApiController)

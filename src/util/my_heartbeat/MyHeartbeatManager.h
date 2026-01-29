@@ -41,7 +41,7 @@ private:
      * 
      * @param data 心跳数据
      */
-    void SendHeartbeat(const nlohmann::json& data);
+    void SendHeartbeat();
 
 private:
     std::atomic<bool> running_{false};
