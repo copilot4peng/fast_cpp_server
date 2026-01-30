@@ -19,6 +19,7 @@ ExecStartPre=/usr/bin/chmod -R 755 /var/fast_cpp_server
 ExecStart=/usr/local/bin/fast_cpp_server_dir/start-system.sh
 
 # systemd handles restarts - always restart even on clean exit (exit code 0)
+# This is intentional per requirements to ensure continuous availability
 Restart=always
 RestartSec=3s
 
@@ -30,8 +31,6 @@ RuntimeDirectory=fast_cpp_server
 
 # Allow write to /var (for logs)
 ReadWritePaths=/var/fast_cpp_server
-LogsDirectory=logs
-LogsDirectoryMode=0755
 
 # Resource limits
 LimitNOFILE=65535

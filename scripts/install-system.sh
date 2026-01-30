@@ -141,8 +141,8 @@ run_cmd "${SUPER} cp ./bin/${MQTT_PROGRAM_NAME} ${BIN_FOLDER_PATH}/${MQTT_PROGRA
 run_cmd "${SUPER} chmod 755 ${BIN_FOLDER_PATH}/${PROGRAM_NAME}"
 run_cmd "${SUPER} chmod 755 ${BIN_FOLDER_PATH}/${MQTT_PROGRAM_NAME}"
 
-# Install all wrapper and mode-specific scripts
-for script in install.sh install-system.sh install-user.sh start.sh start-system.sh start-user.sh uninstall.sh uninstall-system.sh uninstall-user.sh; do
+# Install management scripts (start and uninstall) - not install scripts as they need source files
+for script in start.sh start-system.sh start-user.sh uninstall.sh uninstall-system.sh uninstall-user.sh; do
   if [ -f "./${script}" ]; then
     run_cmd "${SUPER} cp ./${script} ${BIN_FOLDER_PATH}/${script}"
     run_cmd "${SUPER} chmod 755 ${BIN_FOLDER_PATH}/${script}"

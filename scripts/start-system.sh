@@ -94,21 +94,22 @@ fi
 # Check if systemd-cat is available for journald integration
 if command -v systemd-cat >/dev/null 2>&1; then
   log_line info "Using systemd-cat for journald integration"
-  # Start the app - tee to both log file (append mode) and systemd-cat for journald
-  "${APP_BIN}" 2>&1 | tee -a "${RUNTIME_LOG_FILE}" | systemd-cat -t "${PROGRAM_NAME}" &
-  APP_PID=$!
+  # Use a wrapper approach: run app with tee for file logging, wrapped by systemd-cat
+  # This ensures we can properly monitor the actual application process
+  exec > >(tee -a "${RUNTIME_LOG_FILE}" | systemd-cat -t "${PROGRAM_NAME}")
+  exec 2>&1
+  exec "${APP_BIN}"
 else
   log_line warn "systemd-cat not available, logging to file only"
   # Start the app - append to log file
   "${APP_BIN}" >> "${RUNTIME_LOG_FILE}" 2>&1 &
   APP_PID=$!
+  log_line info "Started ${PROGRAM_NAME} with PID=${APP_PID}"
+  
+  # Wait for the process to exit
+  wait "${APP_PID}" || true
+  EXIT_CODE=$?
+  
+  log_line info "${PROGRAM_NAME} exited with code=${EXIT_CODE}"
+  exit ${EXIT_CODE}
 fi
-
-log_line info "Started ${PROGRAM_NAME} with PID=${APP_PID}"
-
-# Wait for the process to exit
-wait "${APP_PID}" || true
-EXIT_CODE=$?
-
-log_line info "${PROGRAM_NAME} exited with code=${EXIT_CODE}"
-exit ${EXIT_CODE}
