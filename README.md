@@ -131,3 +131,105 @@ cpack
 ```shell
 export LD_LIBRARY_PATH=/workspace/build/external/mosquitto/lib:$LD_LIBRARY_PATH
 ```
+
+## Deployment and Management Scripts
+
+The project includes a comprehensive set of deployment and management scripts located in the `scripts/` directory.
+
+### Script Structure
+
+The scripts follow a thin-wrapper pattern with mode-specific implementations:
+
+#### Main Entry Points (Thin Wrappers)
+- **`install.sh`** - Install the application (delegates to system or user mode)
+- **`start.sh`** - Start the application (delegates to system or user mode)
+- **`uninstall.sh`** - Uninstall the application (delegates to system or user mode)
+
+#### Mode-Specific Implementations
+- **`install-system.sh`** - System-wide installation (requires sudo, uses systemd)
+- **`install-user.sh`** - User-local installation (no sudo, no systemd)
+- **`start-system.sh`** - System mode startup (managed by systemd)
+- **`start-user.sh`** - User mode startup (manual process management)
+- **`uninstall-system.sh`** - System-wide uninstallation
+- **`uninstall-user.sh`** - User-local uninstallation
+
+### Usage
+
+#### Installation
+
+System-wide installation (requires sudo):
+```bash
+cd scripts
+./install.sh --system
+```
+
+User-local installation (no sudo required):
+```bash
+cd scripts
+./install.sh --user
+```
+
+#### Starting the Server
+
+For system mode (managed by systemd):
+```bash
+# The service is automatically started by the install script
+sudo systemctl status fast_cpp_server.service
+sudo systemctl start fast_cpp_server.service   # if needed
+sudo systemctl stop fast_cpp_server.service    # to stop
+```
+
+For user mode:
+```bash
+cd scripts
+./start.sh --user
+```
+
+#### Uninstallation
+
+System-wide uninstallation:
+```bash
+cd scripts
+./uninstall.sh --system
+```
+
+User-local uninstallation:
+```bash
+cd scripts
+./uninstall.sh --user
+```
+
+### Logging
+
+#### Script Execution Logs
+All script execution logs are stored in `scripts/logs/` with timestamps.
+
+#### Runtime (Application) Logs
+- **System mode**: Logs are appended to `/var/fast_cpp_server/logs/fast_cpp_server.log` and also available via `journalctl -u fast_cpp_server.service`
+- **User mode**: Logs are appended to `$HOME/.local/share/fast_cpp_server/logs/fast_cpp_server.log`
+
+### Key Features
+
+1. **Path Transparency**: All scripts print the paths they will use before executing
+2. **Debug Mode**: All scripts support `--debug` flag for dry-run testing
+3. **Log Persistence**: Runtime logs are appended (not overwritten) for history tracking
+4. **systemd Integration**: System mode uses systemd for automatic restart with `Restart=always`
+5. **Process Monitoring**: Start scripts wait on the core process and exit when it exits, allowing systemd to handle restarts
+6. **Signal Handling**: Proper SIGTERM handling and forwarding to child processes
+7. **No Mosquitto Coupling**: Start scripts no longer manage mosquitto (it may be installed but is not started by these scripts)
+
+### Installation Paths
+
+#### System Mode
+- Binaries: `/usr/local/bin/fast_cpp_server_dir/`
+- Libraries: `/usr/local/lib/fast_cpp_server/`
+- Config: `/etc/fast_cpp_server/`
+- Logs: `/var/fast_cpp_server/logs/`
+- Service: `/etc/systemd/system/fast_cpp_server.service`
+
+#### User Mode
+- Binaries: `$HOME/.local/fast_cpp_server/bin/`
+- Libraries: `$HOME/.local/fast_cpp_server/lib/`
+- Config: `$HOME/.config/fast_cpp_server/`
+- Logs: `$HOME/.local/share/fast_cpp_server/logs/`
+- Data: `$HOME/.local/share/fast_cpp_server/data/`
