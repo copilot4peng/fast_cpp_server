@@ -99,7 +99,7 @@ if $DEBUG; then
 fi
 
 # Start the app - append to log file
-"${APP_BIN}" >> "${RUNTIME_LOG_FILE}" 2>&1 &
+"${APP_BIN}" -c "${USER_CONFIG_DIR}/config.ini" >> "${RUNTIME_LOG_FILE}" 2>&1 &
 APP_PID=$!
 
 log_line info "Started ${PROGRAM_NAME} with PID=${APP_PID}"

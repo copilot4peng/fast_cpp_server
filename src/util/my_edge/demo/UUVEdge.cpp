@@ -129,7 +129,7 @@ bool UUVEdge::Init(const nlohmann::json& cfg, std::string* err) {
   for (const auto& dcfg : cfg["devices"]) {
     MYLOG_INFO("----------------------------------------------------------------------------------------------");
     device_index++;
-    MYLOG_INFO("[Edge:{}] 初始化设备 {} / {}: {}", edge_id_, device_index, cfg["devices"].size());
+    MYLOG_INFO("[Edge:{}] 初始化设备 {} / {}", edge_id_, device_index, cfg["devices"].size());
     // dcfg.dump(4));
     // MYLOG_INFO("参数");
     try {

@@ -10,11 +10,10 @@ SYS_BIN_DIR="/usr/local/bin/fast_cpp_server_dir"
 SYS_LIB_DIR="/usr/local/lib/fast_cpp_server"
 SYS_CONFIG_DIR="/etc/fast_cpp_server"
 APP_BIN="${SYS_BIN_DIR}/fast_cpp_server"
-RUNTIME_LOG_FILE="/var/fast_cpp_server/logs/fast_cpp_server.log"
+LOG_DIR="/var/fast_cpp_server/logs"
+RUNTIME_LOG_FILE="${LOG_DIR}/fast_cpp_server.log"
 
 # Script logging (for script execution logs)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_DIR="${SCRIPT_DIR}/logs"
 TS="$(date '+%Y%m%d_%H%M%S')"
 SCRIPT_LOG_FILE="${LOG_DIR}/start_system_${TS}.log"
 
@@ -52,6 +51,7 @@ for arg in "$@"; do
   esac
 done
 
+log_line info "Logging to script log file: ${SCRIPT_LOG_FILE}"
 log_line info "Start (system mode) begin: DEBUG=${DEBUG}"
 log_line info "Script log: ${SCRIPT_LOG_FILE}"
 
@@ -94,15 +94,11 @@ fi
 # Check if systemd-cat is available for journald integration
 if command -v systemd-cat >/dev/null 2>&1; then
   log_line info "Using systemd-cat for journald integration"
-  # Use a wrapper approach: run app with tee for file logging, wrapped by systemd-cat
-  # This ensures we can properly monitor the actual application process
-  exec > >(tee -a "${RUNTIME_LOG_FILE}" | systemd-cat -t "${PROGRAM_NAME}")
-  exec 2>&1
   exec "${APP_BIN}"
 else
   log_line warn "systemd-cat not available, logging to file only"
-  # Start the app - append to log file
-  "${APP_BIN}" >> "${RUNTIME_LOG_FILE}" 2>&1 &
+  # Start the app - append to log mosquitto
+  "${APP_BIN}" 2>&1 &
   APP_PID=$!
   log_line info "Started ${PROGRAM_NAME} with PID=${APP_PID}"
   

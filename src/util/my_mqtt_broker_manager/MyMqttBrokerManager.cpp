@@ -1,4 +1,5 @@
 #include "MyMqttBrokerManager.h"
+#include <sys/wait.h> 
 #include <cstdlib>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -41,17 +42,78 @@ bool MyMqttBrokerManager::Start() {
     return true;
 }
 
+// void MyMqttBrokerManager::Stop() {
+//     MYLOG_INFO("停止 MyMqttBrokerManager");
+//     if (broker_pid_ > 0) {
+//         // 发送终止信号
+//         kill(broker_pid_, SIGTERM);
+//         broker_pid_ = -1;
+//     }
+
+//     if (broker_manager_thread_.joinable()) {
+//         broker_manager_thread_.join();
+//     }
+// }
+
 void MyMqttBrokerManager::Stop() {
     MYLOG_INFO("停止 MyMqttBrokerManager");
+
+    // 1) 首先关闭健康检查 / 管理循环，防止其在我们停止期间重启 broker
+    broker_running_ = false;
+
+    // 2) 如果有启动的 broker 进程，发送 SIGTERM 尝试优雅退出
     if (broker_pid_ > 0) {
-        // 发送终止信号
-        kill(broker_pid_, SIGTERM);
+        pid_t pid = broker_pid_;
+        MYLOG_INFO("向 Broker 进程发送 SIGTERM，PID={}", pid);
+        kill(pid, SIGTERM);
+
+        // 3) 等待进程退出（轮询），最多等待 timeout_seconds 秒
+        const int timeout_seconds = 5;
+        int waited = 0;
+        while (waited < timeout_seconds) {
+            // kill(pid, 0) 用于检测进程是否仍存在
+            if (kill(pid, 0) != 0) {
+                // 进程不存在或已退出
+                MYLOG_INFO("Broker 进程已退出（检测到 PID={} 不存在）", pid);
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            waited++;
+        }
+
+        // 4) 如果超时后进程仍然存在，发送 SIGKILL 强制结束
+        if (kill(pid, 0) == 0) {
+            MYLOG_WARN("Broker 进程 PID={} 在 {} 秒内未退出，发送 SIGKILL 强制结束", pid, timeout_seconds);
+            kill(pid, SIGKILL);
+        }
+
+        // 5) 使用 waitpid 回收子进程，避免僵尸
+        int status = 0;
+        pid_t w = waitpid(pid, &status, 0);
+        if (w == pid) {
+            MYLOG_INFO("waitpid 回收 Broker PID={}，status={}", pid, status);
+        } else {
+            MYLOG_WARN("waitpid 未能回收 PID={}，返回值 {}", pid, w);
+        }
+
+        // 6) 清理 pid 标记
         broker_pid_ = -1;
+    } else {
+        MYLOG_INFO("没有需要停止的 Broker 进程（broker_pid_ <= 0）");
     }
 
+    // 7) 等待管理线程退出，但避免在同一线程中 join 自己导致死锁
     if (broker_manager_thread_.joinable()) {
-        broker_manager_thread_.join();
+        if (std::this_thread::get_id() != broker_manager_thread_.get_id()) {
+            MYLOG_INFO("等待 Broker 管理线程退出并 join");
+            broker_manager_thread_.join();
+        } else {
+            // 如果 Stop 是从管理线程内部调用（极少见），不进行 join
+            MYLOG_WARN("Stop 在 Broker 管理线程内部被调用，跳过 self-join");
+        }
     }
+
+    MYLOG_INFO("MyMqttBrokerManager 已停止完成");
 }
 
 bool MyMqttBrokerManager::IsRunning() const {

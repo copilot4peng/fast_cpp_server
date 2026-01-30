@@ -113,7 +113,24 @@ for script in start.sh start-system.sh start-user.sh uninstall.sh uninstall-syst
 done
 
 log_line info "Install libs -> ${USER_LIB_PATH}/"
-run_cmd "cp -r ./lib/* ${USER_LIB_PATH}/"
+
+mkdir -p "${USER_LIB_PATH}"
+for f in ./lib/*; do
+  # 如果没有匹配到项（通配符未展开），跳过
+  [ ! -e "$f" ] && continue
+
+  base=$(basename "$f")
+
+  # 跳过 pkgconfig 目录
+  if [ "$base" = "pkgconfig" ]; then
+    log_line info "跳过 pkgconfig 目录: $f"
+    continue
+  fi
+
+  # 使用 run_cmd 执行复制（以兼容 DEBUG 模式）
+  run_cmd "cp -r \"$f\" \"${USER_LIB_PATH}/\""
+done
+
 run_cmd "chmod 644 ${USER_LIB_PATH}/* || true"
 
 log_line info "Install swagger-res -> ${USER_SHARE_DIR}/"
@@ -124,6 +141,21 @@ log_line info "Install configs (non-overwrite) -> ${USER_CONFIG_PATH}/"
 if $DEBUG; then
   run_cmd "for f in ./config/*; do echo \"would copy \$f -> ${USER_CONFIG_PATH}/\"; done"
 else
+  # # 模板相对路径（源码包内）
+  # template_src="./config/config.user.template.ini"
+  # # 目标配置文件（源码包内覆盖），如果你想把它写到安装目标目录，可以改为 ${DESTDIR}${PREFIX}/etc/... 
+  # target_cfg="./config/config.ini"
+  # # 使用 sed 替换文字 ${HOME} -> 实际 home（转义分隔符）
+  # # 1) 确保模板存在
+  # if [ ! -f "${template_src}" ]; then
+  #   log_line warn "[安装配置] 模板文件不存在：${template_src}，跳过配置替换"
+  #   return 0
+  # fi
+  # log_line info "[安装配置] 生成覆盖模板配置文件：${target_cfg}"
+  # sed "s|\\\${HOME}|${HOME}|g" "${template_src}" > "${target_cfg}"
+  # chmod 644 "${target_cfg}" || true
+  # log_line pro "[安装配置] 生成完成：${target_cfg}"
+
   for f in ./config/*; do
     base="$(basename "$f")"
     if [ ! -f "${USER_CONFIG_PATH}/${base}" ]; then

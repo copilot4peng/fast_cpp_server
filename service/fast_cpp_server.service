@@ -16,12 +16,18 @@ ExecStartPre=/usr/bin/touch /var/fast_cpp_server/logs/fast_cpp_server.log
 ExecStartPre=/usr/bin/chmod -R 755 /var/fast_cpp_server
 
 # Start the wrapper script which will start and monitor the core program
+# ExecStart=/usr/local/bin/fast_cpp_server_dir/start.sh --system
 ExecStart=/usr/local/bin/fast_cpp_server_dir/start-system.sh
+
+# 确保 systemd 在 Stop 时杀掉整个 control group
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=20s
 
 # systemd handles restarts - always restart even on clean exit (exit code 0)
 # This is intentional per requirements to ensure continuous availability
-Restart=always
-RestartSec=3s
+Restart=on-failure
+RestartSec=5s
 
 # Working directory
 WorkingDirectory=/usr/local/bin

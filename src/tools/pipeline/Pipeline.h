@@ -31,6 +31,7 @@ public:
     // 停止：优雅关闭所有线程
     void Stop();
 
+    static bool is_port_available(int port);
 private:
     Pipeline() : is_running_(false) {}
     ~Pipeline();
