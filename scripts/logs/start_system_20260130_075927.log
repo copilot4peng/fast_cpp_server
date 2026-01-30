@@ -1,0 +1,12 @@
+[2026-01-30 07:59:27] [info] Start (system mode) begin: DEBUG=true
+[2026-01-30 07:59:27] [info] Script log: /home/runner/work/fast_cpp_server/fast_cpp_server/scripts/logs/start_system_20260130_075927.log
+[2026-01-30 07:59:27] [info] ========== Runtime Paths ==========
+[2026-01-30 07:59:27] [info] APP_BIN:          /usr/local/bin/fast_cpp_server_dir/fast_cpp_server
+[2026-01-30 07:59:27] [info] SYS_LIB_DIR:      /usr/local/lib/fast_cpp_server
+[2026-01-30 07:59:27] [info] SYS_CONFIG_DIR:   /etc/fast_cpp_server
+[2026-01-30 07:59:27] [info] RUNTIME_LOG_FILE: /var/fast_cpp_server/logs/fast_cpp_server.log
+[2026-01-30 07:59:27] [info] ===================================
+[2026-01-30 07:59:27] [info] Starting fast_cpp_server...
+[2026-01-30 07:59:27] [dev] Would run: "/usr/local/bin/fast_cpp_server_dir/fast_cpp_server"
+[2026-01-30 07:59:27] [dev] Would redirect to: /var/fast_cpp_server/logs/fast_cpp_server.log and journald
+[2026-01-30 07:59:27] [dev] Would wait on PID
