@@ -133,19 +133,36 @@ nlohmann::json MyMqttBrokerManager::GetHeartbeat() const {
 }
 
 void MyMqttBrokerManager::BrokerProcessManager() {
-    // 启动 Broker 子进程
-    pid_t pid = fork();
-    if (pid == 0) {
-        // 子进程执行 Broker
-        MYLOG_INFO("启动 Mosquitto Broker 进程...");
-        execlp(broker_bin_.c_str(), "mosquitto", "-c", broker_config_.c_str(), broker_foreground_ ? "-v" : nullptr, (char*)nullptr);
-        exit(127);
-    }
 
-    // 父进程保存子进程的 PID
-    broker_pid_ = pid;
-    broker_running_ = true;
-    MYLOG_INFO("Mosquitto Broker 进程已启动, PID: {}", broker_pid_);
+    bool startMQTTBrokerStatus = false;
+    while (!startMQTTBrokerStatus) {
+        try {
+            // 启动 Broker 子进程
+            pid_t pid = fork();     // 创建子进程
+            if (pid == 0) {
+                // 子进程执行 Broker
+                MYLOG_WARN("子进程启动中...");
+                MYLOG_INFO("PID:{} 启动 Mosquitto Broker 进程: {} -c {} {}", getpid(), broker_bin_, broker_config_, broker_foreground_ ? "-v" : "");
+                execlp(broker_bin_.c_str(), "mosquitto", "-c", broker_config_.c_str(), broker_foreground_ ? "-v" : nullptr, (char*)nullptr);
+                exit(127);  // execlp 失败
+                // 父进程继续
+                if (pid < 0) {
+                    MYLOG_ERROR("Fork 失败，无法启动 Mosquitto Broker 进程");
+                    return;
+                } else {
+                    MYLOG_INFO("父进程继续，子进程 PID: {}", pid);
+                }
+            }
+            // 父进程保存子进程的 PID
+            broker_pid_ = pid;
+            broker_running_ = true;
+            MYLOG_INFO("Mosquitto Broker 进程已启动, PID: {}", broker_pid_);
+            startMQTTBrokerStatus = true;
+        } catch (const std::exception& e) {
+            MYLOG_ERROR("启动 MQTT Broker 失败，5 秒后重试: {}", e.what());
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
+    }
     // 启动健康检查
     HealthCheck();
 }

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "MyData.h"
+#include "demo/Task.h"
 
 namespace my_edge {
 
@@ -127,6 +128,20 @@ public:
 
   // 获取类内元素,有几个队列，几个映射关系等，以及设备信息等（仅供调试/日志使用）
   virtual nlohmann::json DumpInternalInfo() const = 0;
+
+  /**
+     * @brief 向 Edge 添加任务。
+     * @param task 要添加的任务的 JSON 表示。
+     * @return 如果成功添加任务则返回 true，否则返回 false。
+     */
+  virtual bool AppendJsonTask(const nlohmann::json& task) = 0;
+
+  /**
+     * @brief 向 Edge 添加任务。
+     * @param task 要添加的任务对象。
+     * @return 如果成功添加任务则返回 true，否则返回 false。
+     */
+  virtual bool AppendTask(const my_data::Task& task) = 0;
 };
 
 } // namespace my_edge

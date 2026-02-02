@@ -194,7 +194,8 @@ void Pipeline::LaunchHeartbeat(const nlohmann::json& args) {
         workers_.emplace_back(&HeartbeatManager::Start, &hb);
 
         MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "线程已成功创建并加入管理列表");
-
+        // sleep 10;
+        std::this_thread::sleep_for(std::chrono::seconds(15));
     } catch (const std::exception& e) {
         MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
     } catch (...) {

@@ -173,6 +173,22 @@ public:
      */
     bool getEdgeHistoryTaskStatus(const std::string& edge_id, nlohmann::json& history_task_status) const;
 
+    /**
+     * @brief 获取指定 ID 的 Edge 的内部信息 Dump。
+     * @param edge_id Edge 的 ID。
+     * @param dump_info 用于存储内部信息 Dump 的 JSON 对象。
+     * @return 如果成功获取则返回 true，否则返回 false。
+     */
+    bool getEdgeInternalDumpInfo(const std::string& edge_id, nlohmann::json& dump_info) const;
+
+    /**
+     * @brief 向指定 ID 的 Edge 添加任务（使用 my_data::Task）。
+     * @param edge_id Edge 的 ID。
+     * @param task 要添加的任务，使用 my_data::Task 表示。
+     * @return 如果任务成功添加则返回 true，否则返回 false。
+     */
+    bool appendTaskToEdgeByIdV2(const std::string& edge_id, const my_data::Task& task) const;
+
 private:
     MyEdges() = default;
     ~MyEdges() = default;  // 析构函数，用于必要清理

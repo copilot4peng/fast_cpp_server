@@ -3,7 +3,7 @@
 #include "EdgeController.hpp"
 #include "dto/demo/EdgeStatusDto.hpp"
 
-namespace my_api::edge {
+namespace my_api::edge_manager {
 
 EdgeController::EdgeController(
     const std::shared_ptr<ObjectMapper>& objectMapper
@@ -20,8 +20,7 @@ EdgeController::createShared(
 std::shared_ptr<oatpp::web::protocol::http::outgoing::Response> EdgeController::getEdgesStatus() {
     MYLOG_INFO("[API] 收到请求: GET /v1/edges/status");
 
-    auto status_list =
-        edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
+    auto status_list = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
 
     auto result =
         oatpp::Vector<oatpp::Object<my_api::dto::EdgeStatusDto>>::createShared();
@@ -42,7 +41,7 @@ std::shared_ptr<oatpp::web::protocol::http::outgoing::Response> EdgeController::
 std::shared_ptr<oatpp::web::protocol::http::outgoing::Response> EdgeController::startDevice(const oatpp::String& name) {
     MYLOG_INFO("[API] 收到请求: POST /v1/edges/{}/start", name->c_str());
 
-    edge_manager::MyEdgeManager::GetInstance().StartDevice(name->c_str());
+    ::edge_manager::MyEdgeManager::GetInstance().StartDevice(name->c_str());
 
     return ok("Edge device started successfully.");
    
@@ -51,7 +50,7 @@ std::shared_ptr<oatpp::web::protocol::http::outgoing::Response> EdgeController::
 std::shared_ptr<oatpp::web::protocol::http::outgoing::Response> EdgeController::stopDevice(const oatpp::String& name) {
     MYLOG_INFO("[API] 收到请求: POST /v1/edges/{}/stop", name->c_str());
 
-    edge_manager::MyEdgeManager::GetInstance().StopDevice(name->c_str());
+    ::edge_manager::MyEdgeManager::GetInstance().StopDevice(name->c_str());
 
     return ok("Edge device stopped successfully.");
 }

@@ -1,5 +1,6 @@
 #include "MyEdges.h"
 #include "MyLog.h"
+#include "demo/Task.h"
 #include <algorithm>
 
 namespace my_edge {
@@ -120,15 +121,14 @@ const std::unique_ptr<IEdge>& MyEdges::getEdgeById(const std::string& edge_id) c
         auto it = edges_.find(edge_id);
         if (it == edges_.end()) {
             MyLog::Warn("ID 为 '" + edge_id + "' 的 Edge 未找到。");
-            throw EdgeNotFoundException(edge_id);
+        } else {
+            MyLog::Info("ID 为 '" + edge_id + "' 的 Edge 获取成功。");
+            return it->second;
         }
-        return it->second;
-    } catch (const EdgeNotFoundException&) {
-        throw;  // 重新抛出
     } catch (const std::exception& e) {
         MyLog::Error("获取 Edge 时发生异常: " + std::string(e.what()));
-        throw EdgeNotFoundException(edge_id);  // 或处理为默认
     }
+    return nullptr;  // 永远不会到达
 }
 
 nlohmann::json MyEdges::GetHeartbeatInfo() const {
@@ -182,15 +182,38 @@ bool MyEdges::SelectEdgeByIdDoAction(const std::string& edge_id, const nlohmann:
 }
 
 bool MyEdges::appendTaskToEdgeById(const std::string& edge_id, const nlohmann::json& task) const {
+    MYLOG_INFO("尝试向 ID 为 '{}' 的 Edge 添加任务: {}", edge_id, task.dump(4));
     try {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = edges_.find(edge_id);
         if (it == edges_.end()) {
             MyLog::Warn("ID 为 '" + edge_id + "' 的 Edge 未找到，无法添加任务。");
             return false;
+        } else {
+            MYLOG_INFO("找到 ID 为 '{}' 的 Edge，准备添加任务。", edge_id);
         }
         bool result = false;
-        // return it->second->AppendTask(task);
+        result = it->second->AppendJsonTask(task);
+        return result;
+    } catch (const std::exception& e) {
+        MyLog::Error("向 Edge 添加任务时发生异常: " + std::string(e.what()));
+        return false;
+    }
+}
+
+bool MyEdges::appendTaskToEdgeByIdV2(const std::string& edge_id, const my_data::Task& task) const {
+    MYLOG_INFO("尝试向 ID 为 '{}' 的 Edge 添加任务: {}", edge_id, task.toString());
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = edges_.find(edge_id);
+        if (it == edges_.end()) {
+            MyLog::Warn("ID 为 '" + edge_id + "' 的 Edge 未找到，无法添加任务。");
+            return false;
+        } else {
+            MYLOG_INFO("找到 ID 为 '{}' 的 Edge，准备添加任务。", edge_id);
+        }
+        bool result = false;
+        result = it->second->AppendTask(task);
         return result;
     } catch (const std::exception& e) {
         MyLog::Error("向 Edge 添加任务时发生异常: " + std::string(e.what()));
@@ -271,6 +294,7 @@ bool MyEdges::getAllEdgesOnlineStatus(std::unordered_map<std::string, bool>& sta
  
 
 bool MyEdges::getOnlineEdges(std::vector<std::string>& online_edges) const {
+    MyLog::Info("获取在线 Edges 列表...");
     try {
         std::lock_guard<std::mutex> lock(mutex_);
         online_edges.clear();
@@ -278,7 +302,9 @@ bool MyEdges::getOnlineEdges(std::vector<std::string>& online_edges) const {
             // if (pair.second->IsOnline()) {
             //     online_edges.push_back(pair.first);
             // }
+            online_edges.push_back(pair.first);  // 占位符
         }
+        MyLog::Info("在线 Edges 列表获取完成，数量: " + std::to_string(online_edges.size()));
         return true;
     } catch (const std::exception& e) {
         MyLog::Error("获取在线 Edges 列表时发生异常: " + std::string(e.what()));
@@ -316,6 +342,25 @@ bool MyEdges::getEdgeHistoryTaskStatus(const std::string& edge_id, nlohmann::jso
         MyLog::Error("获取 Edge 历史任务状态时发生异常: " + std::string(e.what()));
         return false;
     }
+}
+
+bool MyEdges::getEdgeInternalDumpInfo(const std::string& edge_id, nlohmann::json& dump_info) const {
+    bool foundStatus = false;
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = edges_.find(edge_id);
+        if (it == edges_.end()) {
+            MyLog::Warn("ID 为 '" + edge_id + "' 的 Edge 未找到，无法获取内部信息 Dump。");
+            foundStatus = false;
+        } else {
+            dump_info = it->second->DumpInternalInfo();
+            foundStatus = true;
+        }
+    } catch (const std::exception& e) {
+        MyLog::Error("获取 Edge 内部信息 Dump 时发生异常: " + std::string(e.what()));
+        foundStatus = false;
+    }
+    return foundStatus;
 }
 
 }  // namespace my_edge

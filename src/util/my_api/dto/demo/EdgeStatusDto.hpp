@@ -7,6 +7,12 @@ namespace my_api::dto {
 
 #include OATPP_CODEGEN_BEGIN(DTO)
 
+class EdgeIDDto : public oatpp::DTO {
+    DTO_INIT(EdgeIDDto, DTO)
+
+    DTO_FIELD(String, edgeId);
+};
+
 class EdgeStatusDto : public oatpp::DTO {
     DTO_INIT(EdgeStatusDto, DTO)
 

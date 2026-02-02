@@ -1,6 +1,7 @@
 #include "UUVEdge.h"
 
 #include <chrono>
+#include <cstddef>
 #include <thread>
 #include <utility>
 
@@ -9,6 +10,7 @@
 #include "MyDevice.h"
 #include "MyLog.h"
 #include "demo/StatusRepository.h"
+#include "demo/Task.h"
 namespace my_edge::demo {
 
 using namespace my_data;
@@ -605,6 +607,80 @@ nlohmann::json UUVEdge::DumpInternalInfo() const {
   // edgeInfo["normalizers"] = normalizersJson;
 
   return edgeInfo;
+}
+
+bool UUVEdge::AppendJsonTask(const nlohmann::json& task) {
+  std::shared_lock<std::shared_mutex> lk(rw_mutex_);
+  try {
+    // 提取 device_id
+    std::string device_id = my_data::jsonutil::GetStringOr(task, "device_id", "");
+    if (device_id.empty()) {
+      MYLOG_ERROR("[Edge:{}] AppendTask 失败：缺少 device_id", edge_id_);
+      return false;
+    } else {
+      MYLOG_INFO("[Edge:{}] AppendTask to device_id={}", edge_id_, device_id);
+    }
+
+    // generate task 
+    my_data::Task t = my_data::Task::fromJson(task);
+
+    // 将任务添加到队列
+    bool result = this->AppendTaskToTargetTaskQueue(device_id, t);
+    return result;
+  } catch (const std::exception& e) {
+    MyLog::Error("向 Edge 添加任务时发生异常: " + std::string(e.what()));
+    return false;
+  }
+}
+
+bool UUVEdge::AppendTask(const Task& task) {
+  std::shared_lock<std::shared_mutex> lk(rw_mutex_);
+  try {
+    // 提取 device_id
+    std::string device_id = task.device_id;
+    if (device_id.empty()) {
+      MYLOG_ERROR("[Edge:{}] AppendTask 失败：缺少 device_id", edge_id_);
+      return false;
+    } else {
+      MYLOG_INFO("[Edge:{}] AppendTask to device_id={}", edge_id_, device_id);
+    }
+
+    // 将任务添加到队列
+    bool result = this->AppendTaskToTargetTaskQueue(device_id, task);
+    return result;
+  } catch (const std::exception& e) {
+    MyLog::Error("向 Edge 添加任务时发生异常: " + std::string(e.what()));
+    return false;
+  }
+}
+
+bool UUVEdge::AppendTaskToTargetTaskQueue(const my_data::DeviceId& device_id, const Task& task) {
+  bool result = false;
+  size_t max_task_queue_size = 1000; // 假设的最大队列长度限制
+  std::shared_lock<std::shared_mutex> lk(rw_mutex_);
+  try {
+    // 查找对应的任务队列
+    auto it = queues_.find(device_id);
+    if (it == queues_.end() || !it->second) {
+      MYLOG_ERROR("[Edge:{}] AppendTaskToTargetTaskQueue 失败：找不到 device_id={} 的任务队列", edge_id_, device_id);
+      return result;
+    } else {
+      MYLOG_INFO("[Edge:{}] AppendTaskToTargetTaskQueue 找到 device_id={} 的任务队列", edge_id_, device_id);
+    }
+    // 将任务添加到队列
+    if (it->second->Size() >= max_task_queue_size) {
+      MYLOG_WARN("[Edge:{}] AppendTaskToTargetTaskQueue 警告：device_id={} 的任务队列已满，当前大小={}", edge_id_, device_id, it->second->Size());
+      return result;
+    } else {
+      MYLOG_INFO("[Edge:{}] AppendTaskToTargetTaskQueue device_id={} 的任务队列当前大小={}", edge_id_, device_id, it->second->Size());
+      it->second->Push(task);
+      MYLOG_INFO("[Edge:{}] AppendTaskToTargetTaskQueue 成功：任务已添加到 device_id={} 的任务队列", edge_id_, device_id);
+      result = true;
+    }
+  } catch (const std::exception& e) {
+    MyLog::Error("向 Edge 添加任务时发生异常: " + std::string(e.what()));
+  }
+  return result;
 }
 
 } // namespace my_edge::demo
