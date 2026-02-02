@@ -87,7 +87,7 @@ void MyAPI::ServerThread(int port) {
         auto router = oatpp::web::server::HttpRouter::createShared();
         auto docEndpoints = oatpp::web::server::api::Endpoints();
 
-        auto edgeController = my_api::edge::EdgeController::createShared(
+        auto edgeController = my_api::edge_manager::EdgeController::createShared(
             std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper)
         );
         router->addController(edgeController);

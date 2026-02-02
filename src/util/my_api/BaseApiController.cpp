@@ -7,13 +7,11 @@ BaseApiController::BaseApiController(
 )
     : oatpp::web::server::api::ApiController(objectMapper) {}
 
-OutgoingResponsePtr
-BaseApiController::ok(const oatpp::String& message) {
+OutgoingResponsePtr BaseApiController::ok(const oatpp::String& message) {
     return createResponse(Status::CODE_200, message);
 }
 
-OutgoingResponsePtr
-BaseApiController::badRequest(const oatpp::String& message) {
+OutgoingResponsePtr BaseApiController::badRequest(const oatpp::String& message) {
     return createResponse(Status::CODE_400, message);
 }
 

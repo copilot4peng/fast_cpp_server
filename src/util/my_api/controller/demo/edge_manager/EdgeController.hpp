@@ -4,7 +4,7 @@
 #include "oatpp/web/server/api/ApiController.hpp"
 #include "oatpp/core/macro/codegen.hpp"
 
-namespace my_api::edge {
+namespace my_api::edge_manager {
 
 #include OATPP_CODEGEN_BEGIN(ApiController)
 

@@ -9,6 +9,18 @@
 #include "MyAPI.h"
 #include "MyLog.h"
 #include <memory>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <errno.h>
+
+#include <cstring>
+#include <system_error>
+#include <thread>
+#include <chrono>
+#include <string>
+
 
 namespace tools {
 namespace pipeline {
@@ -182,7 +194,8 @@ void Pipeline::LaunchHeartbeat(const nlohmann::json& args) {
         workers_.emplace_back(&HeartbeatManager::Start, &hb);
 
         MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "线程已成功创建并加入管理列表");
-
+        // sleep 10;
+        std::this_thread::sleep_for(std::chrono::seconds(15));
     } catch (const std::exception& e) {
         MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
     } catch (...) {
@@ -221,6 +234,52 @@ void Pipeline::LaunchEdgeMonitor(const nlohmann::json& args) {
 
 }
 
+// 返回 true 表示端口可用（可在本进程 bind），false 表示不可用或检测出错（视为占用）
+bool Pipeline::is_port_available(int port) {
+    // 创建 IPv4 TCP socket
+    int sock = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        MYLOG_WARN("检测端口 {} 时创建 socket 失败: {}，视为不可用", port, std::strerror(errno));
+        return false;
+    }
+
+    // 允许快速重用地址（不影响判断）
+    int opt = 1;
+    (void)setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    struct sockaddr_in addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY); // 0.0.0.0
+    addr.sin_port = htons(static_cast<uint16_t>(port));
+
+    // 尝试 bind
+    int ret = ::bind(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    if (ret == 0) {
+        // bind 成功，说明端口暂时可用；释放 socket 后返回 true
+        ::close(sock);
+        return true;
+    } else {
+        // bind 失败，检查 errno
+        int err = errno;
+        if (err == EADDRINUSE) {
+            // 明确被占用
+            ::close(sock);
+            return false;
+        } else if (err == EACCES) {
+            // 权限问题（端口 <1024 或权限限制），视为不可用
+            MYLOG_WARN("检测端口 {} 时权限受限: {}，视为不可用", port, std::strerror(err));
+            ::close(sock);
+            return false;
+        } else {
+            // 其它错误，记录并视为不可用
+            MYLOG_WARN("检测端口 {} 时 bind 出错: {}，视为不可用", port, std::strerror(err));
+            ::close(sock);
+            return false;
+        }
+    }
+}
+
 // 在 Pipeline.cpp 的模块逻辑实现区添加
 void Pipeline::LaunchRestAPI(const nlohmann::json& args) {
     const std::string module_name = "REST-API模块";
@@ -230,6 +289,38 @@ void Pipeline::LaunchRestAPI(const nlohmann::json& args) {
         // 1. 提取参数
         int port = args.value("port", 8000); // 默认 8000 端口
         
+        // 2. 等待端口可用（检查 + 重试）
+        const std::chrono::seconds retry_interval(5);
+        while (true) {
+            if (is_port_available(port)) {
+                MYLOG_INFO("* 模块: {}, 端口 {} 当前可用，准备启动", module_name, port);
+                // 尝试启动（Start 内部可能会 bind 并启动线程）
+                try {
+                    my_api::MyAPI::GetInstance().Start(port);
+                    MYLOG_INFO("* 模块: {}, 监听端口: {}, 状态: {}", module_name, port, "启动成功");
+                    break; // 启动成功，跳出重试循环
+                } catch (const std::system_error& se) {
+                    // 如果是地址被占用的系统错误，等待后重试
+                    if (se.code().value() == EADDRINUSE) {
+                        MYLOG_WARN("* 模块: {}, 启动时端口被占用（Start 抛出 EADDRINUSE），等待 {} 秒后重试...", module_name, retry_interval.count());
+                        std::this_thread::sleep_for(retry_interval);
+                        continue;
+                    } else {
+                        // 非端口相关的 system_error，记录并重新抛出或中止
+                        MYLOG_ERROR("* 模块: {}, 启动失败（system_error）：{}，code={}，中止启动", module_name, se.what(), se.code().value());
+                        throw;
+                    }
+                } catch (const std::exception& e) {
+                    // Start 抛出了其它 std::exception，记录并中止（如果希望也可选择重试）
+                    MYLOG_ERROR("* 模块: {}, 启动失败（异常）：{}，中止启动", module_name, e.what());
+                    throw;
+                }
+            } else {
+                // 端口被占用，等待后重试
+                MYLOG_WARN("* 模块: {}, 端口 {} 被占用，{} 秒后重试检查...", module_name, port, retry_interval.count());
+                std::this_thread::sleep_for(retry_interval);
+            }
+        }
         // 2. 获取 API 单例并启动
         // 注意：MyAPI::Start 内部已经启动了 std::thread，
         // 所以我们不需要再把 MyAPI::Start 丢进 workers_

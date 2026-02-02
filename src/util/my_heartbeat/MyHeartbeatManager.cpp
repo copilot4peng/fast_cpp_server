@@ -35,9 +35,14 @@ void HeartbeatManager::Init(const nlohmann::json& config) {
 }
 
 void HeartbeatManager::Start() {
-    if (running_) return;
-    running_ = true;
-    worker_ = std::thread(&HeartbeatManager::WorkerLoop, this);
+    if (running_) {
+        MYLOG_WARN("HeartbeatManager 已经在运行，忽略重复启动请求");
+        return;
+    } else {
+        MYLOG_INFO("Starting HeartbeatManager...");
+        running_ = true;
+        worker_ = std::thread(&HeartbeatManager::WorkerLoop, this);
+    }   
 }
 
 void HeartbeatManager::Stop() {
@@ -51,7 +56,7 @@ void HeartbeatManager::WorkerLoop() {
     while (running_) {
         try {
             BuildHeartbeat();
-            SendHeartbeat();
+            this->SendHeartbeat();
         } catch (const std::exception& e) {
             MYLOG_ERROR("Heartbeat error: {}", e.what());
         }
@@ -73,11 +78,15 @@ void HeartbeatManager::BuildHeartbeat() {
     heartbeat_data_["base"] = base;
     heartbeat_data_["extra"] = config_.value("extra", nlohmann::json::object());
 
-    nlohmann::json edgeData = edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
-    heartbeat_data_["edge_devices"] = edgeData;
+    nlohmann::json edgeData = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
+    nlohmann::json edgesData = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
+    // heartbeat_data_["edge_devices"] = edgeData;
     // 添加边缘设备信息
     if (true) {
         heartbeat_data_["edge_summary"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
+    }
+    if (true) {
+        heartbeat_data_["edge_managed_devices"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
     }
 }
 
@@ -91,6 +100,7 @@ void HeartbeatManager::SendHeartbeat() {
     if (sender == "log") {
         if (simple_json4log) {
             MYLOG_INFO("Heartbeat: {}", this->heartbeat_data_["heartbeat"].dump());
+            MYLOG_INFO("Heartbeat: {}", this->heartbeat_data_.dump(4));
         } else {
             MYLOG_INFO("Heartbeat Data: {}", this->heartbeat_data_.dump(4));
         }
