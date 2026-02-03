@@ -6,8 +6,15 @@
 #include "MyEdges.h"
 #include "MyEdge.h"
 #include "MyMqttBrokerManager.h"
+#include "MqttService.hpp"
 #include "MyAPI.h"
 #include "MyLog.h"
+
+#include <cstring>
+#include <system_error>
+#include <thread>
+#include <chrono>
+#include <string>
 #include <memory>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -15,17 +22,12 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <cstring>
-#include <system_error>
-#include <thread>
-#include <chrono>
-#include <string>
-
 
 namespace tools {
 namespace pipeline {
 
 using namespace my_edge;
+using namespace my_heartbeat;
 
 Pipeline::~Pipeline() {
     Stop();
@@ -116,6 +118,9 @@ void Pipeline::Start() {
                 if (model_name == "heartbeat") {
                     LaunchHeartbeat(model_args);
                     success_count++;
+                } else if (model_name == "mqtt_comm") {
+                    LaunchMQTTComm(model_args);
+                    success_count++;
                 } else if (model_name == "comm") {
                     LaunchComm(model_args);
                     success_count++;
@@ -179,7 +184,7 @@ void Pipeline::LaunchHeartbeat(const nlohmann::json& args) {
 
     try {
         // 1. 获取业务单例
-        auto& hb = HeartbeatManager::Instance();
+        auto& hb = my_heartbeat::HeartbeatManager::GetInstance();
 
         // 2. 初始化配置 (带保护)
         if (args.is_null() || args.empty()) {
@@ -191,7 +196,7 @@ void Pipeline::LaunchHeartbeat(const nlohmann::json& args) {
 
         // 3. 启动线程 (不使用匿名函数/Lambda)
         // 使用成员函数指针：&类名::函数名, 实例地址
-        workers_.emplace_back(&HeartbeatManager::Start, &hb);
+        workers_.emplace_back(&my_heartbeat::HeartbeatManager::Start, &hb);
 
         MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "线程已成功创建并加入管理列表");
         // sleep 10;
@@ -336,6 +341,35 @@ void Pipeline::LaunchRestAPI(const nlohmann::json& args) {
         MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
     }
 }
+
+void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
+    int interval = args.value("interval_sec_", 3);
+
+    my_mqtt::MqttService& mqtt_service = my_mqtt::MqttService::GetInstance();
+    if (!mqtt_service.Init(args)) {
+        MYLOG_ERROR("MQTTComm 模块初始化失败，跳过启动");
+        return;
+    } else {
+        MYLOG_INFO("MQTTComm 模块初始化成功");
+    }
+
+    // 注册消息回调等（如果需要）
+    // // mqtt_service.SetMessageCallback(...);
+    // mqtt_service.AddRoute("/do_operation", [](const std::string& topic, const std::string& payload) {
+    //     MYLOG_INFO("MQTTComm 收到操作请求，Topic: {}, Payload: {}", topic, payload);
+    //     // 处理操作请求的逻辑
+    // });
+    
+    // 注入 publisher 适配器（heartbeat 只看到 IMqttPublisher）
+    my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());
+
+    // 启动线程
+    workers_.emplace_back(&my_mqtt::MqttService::Start, &mqtt_service);
+    MYLOG_INFO("MQTTComm 模块线程已成功创建并加入管理列表");
+
+}
+    
+
 
 void Pipeline::LaunchComm(const nlohmann::json& args) {
     int interval = args.value("interval_sec_", 3);

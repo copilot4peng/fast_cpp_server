@@ -10,8 +10,6 @@ if (BUILD_MY_MQTT)
     # 使用 APPEND 避免变量被覆盖
     file(GLOB_RECURSE MY_MQTT_SOURCES 
         "${PROJECT_SOURCE_DIR}/src/util/my_mqtt/*.cpp"
-        "${PROJECT_SOURCE_DIR}/src/util/my_mqtt/fast_mqtt_client/*.cpp"
-        "${PROJECT_SOURCE_DIR}/src/util/my_mqtt/fast_mqtt_server/*.cpp"
     )
 
     pretty_print_list("MY_MQTT_SOURCES List" MY_MQTT_SOURCES)

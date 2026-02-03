@@ -42,6 +42,53 @@
             },
             "1": {
                 "model_args": {
+                   "host":"127.0.0.1",
+                   "port":1883,
+                   "keepalive":60,
+                   "client_id":"app_01",
+                   "clean_session":true,
+                   "username":"", "password":"",
+                   "reconnect": { "min_sec":2, "max_sec":32 }
+                 },
+                "model_name": "mqtt_comm",
+                "step_time_interval": 5
+            },
+            "2": {
+                "model_args": {
+                    "interval_sec_": 3,
+                    "simple_json4log": true
+                },
+                "model_name": "heartbeat",
+                "step_time_interval": 2
+            }
+        }
+    },
+    "pipeline1": {
+        "execute_node_number": 3,
+        "executes": {
+            "0": {
+                "model_args": {
+                    "enable": true,
+                    "broker": {
+                        "port": 1883,
+                        "bin": "/home/cs/DockerRoot/fast_cpp_server/build/bin/mosquitto",
+                        "config": "/home/cs/DockerRoot/fast_cpp_server/config/mosquitto.conf",
+                        "log": "/home/cs/DockerRoot/fast_cpp_server/mosquitto.log",
+                        "foreground": true
+                    },
+                    "broker_pro": {
+                        "port": 1883,
+                        "bin": "/usr/local/bin/fast_cpp_server_dir/mosquitto",
+                        "config": "/etc/fast_cpp_server/mosquitto.conf",
+                        "log": "/var/fast_cpp_server/logs/mosquitto.log",
+                        "foreground": true
+                    }
+                },
+                "model_name": "MQTTBroker",
+                "step_time_interval": 5
+            },
+            "1": {
+                "model_args": {
                     "interval_sec_": 3,
                     "simple_json4log": true
                 },
