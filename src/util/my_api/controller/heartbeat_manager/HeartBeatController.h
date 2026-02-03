@@ -25,6 +25,8 @@ public:
     ENDPOINT("POST", "/v1/heartbeat", postHeartbeat,
              BODY_DTO(oatpp::Object<my_api::dto::HeartbeatDto>, heartbeat));
 
+    // 获取心跳启动参数
+    ENDPOINT("GET", "/v1/heartbeat/config", getHeartbeatConfig);
              
 };
 

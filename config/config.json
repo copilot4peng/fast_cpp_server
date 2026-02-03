@@ -17,17 +17,51 @@
         }
     },
     "pipeline": {
-        "execute_node_number": 3,
+        "execute_node_number": 4,
         "executes": {
             "0": {
                 "model_args": {
-                    "interval_sec_": 3,
+                    "enable": true,
+                    "broker": {
+                        "port": 1883,
+                        "bin": "/home/cs/DockerRoot/fast_cpp_server/build/bin/mosquitto",
+                        "config": "/home/cs/DockerRoot/fast_cpp_server/config/mosquitto.conf",
+                        "log": "/home/cs/DockerRoot/fast_cpp_server/mosquitto.log",
+                        "foreground": true
+                    },
+                    "broker_pro": {
+                        "port": 1883,
+                        "bin": "/usr/local/bin/fast_cpp_server_dir/mosquitto",
+                        "config": "/etc/fast_cpp_server/mosquitto.conf",
+                        "log": "/var/fast_cpp_server/logs/mosquitto.log",
+                        "foreground": true
+                    }
+                },
+                "model_name": "MQTTBroker",
+                "step_time_interval": 5
+            },
+            "1": {
+                "model_args": {
+                   "host":"127.0.0.1",
+                   "port":1883,
+                   "keepalive":60,
+                   "client_id":"app_01",
+                   "clean_session":true,
+                   "username":"", "password":"",
+                   "reconnect": { "min_sec":2, "max_sec":32 }
+                 },
+                "model_name": "mqtt_comm",
+                "step_time_interval": 5
+            },
+            "2": {
+                "model_args": {
+                    "interval_sec": 1,
                     "simple_json4log": true
                 },
                 "model_name": "heartbeat",
                 "step_time_interval": 2
             },
-            "1": {
+            "3": {
                 "model_args": {
                     "interval_sec_": 10,
                     "edge_number": 1,
@@ -82,184 +116,11 @@
                 },
                 "model_name": "edge"
             },
-            "3": {
-                "model_args": {
-                    "port": 9999
-                },
-                "model_name": "rest_api"
-            },
-            "4": {
-                "model_args": {
-                    "enable": true,
-                    "broker": {
-                        "port": 1883,
-                        "bin": "/home/cs/DockerRoot/fast_cpp_server/build/bin/mosquitto",
-                        "config": "/home/cs/DockerRoot/fast_cpp_server/config/mosquitto.conf",
-                        "log": "/home/cs/DockerRoot/fast_cpp_server/mosquitto.log",
-                        "foreground": true
-                    },
-                    "broker_pro": {
-                        "port": 1883,
-                        "bin": "/usr/local/bin/fast_cpp_server_dir/mosquitto",
-                        "config": "/etc/fast_cpp_server/mosquitto.conf",
-                        "log": "/var/fast_cpp_server/logs/mosquitto.log",
-                        "foreground": true
-                    }
-                },
-                "model_name": "MQTTBroker"
-            }
-        }
-    },
-    "pipeline_copy": {
-        "execute_node_number": 6,
-        "executes": {
-            "0": {
-                "model_args": {
-                    "interval_sec_": 10,
-                    "edge_number": 1,
-                    "edge_create_args": [
-                        {
-                            "edge_type": "UUV",
-                            "edge_id": "uuv_001",
-                            "name": "uuv_001",
-                            "version": "0.1.0",
-                            "allow_queue_when_estop": false,
-                            "devices_count": 3,
-                            "devices": [
-                                {
-                                    "device_id": "depth_001",
-                                    "type": "depth_sensor",
-                                    "name": "depth_sensor_001",
-                                    "capability": "water_depth",
-                                    "unit": "m",
-                                    "control": {
-                                        "simulate": true,
-                                        "simulate_latency_ms": 10,
-                                        "sample_interval_ms": 500
-                                    }
-                                },
-                                {
-                                    "device_id": "flow_001",
-                                    "type": "flow_sensor",
-                                    "name": "flow_sensor_001",
-                                    "capability": "water_flow_speed",
-                                    "unit": "m/s",
-                                    "control": {
-                                        "simulate": true,
-                                        "simulate_latency_ms": 10,
-                                        "sample_interval_ms": 500
-                                    }
-                                },
-                                {
-                                    "device_id": "split_001",
-                                    "type": "wind_sensor",
-                                    "name": "wind_sensor_001",
-                                    "capability": "wind",
-                                    "unit": "m/s",
-                                    "control": {
-                                        "simulate": true,
-                                        "simulate_latency_ms": 10,
-                                        "sample_interval_ms": 500
-                                    }
-                                }
-                            ]
-                            }
-                    ]
-                },
-                "model_name": "edge"
-            },
-            "1": {
-                "model_args": {
-                    "interval_sec_": 3
-                },
-                "model_name": "comm"
-            },
-            "2": {
-                "model_args": {
-                    "interval_sec_": 3
-                },
-                "model_name": "system_healthy",
-                "step_time_interval": 5
-            },
-            "3": {
-                "model_args": {
-                    "edges": {
-                        "0": {
-                            "ip": "127.0.0.1",
-                            "name": "wind",
-                            "port": 2000,
-                            "actions": {
-                                "getData": {
-                                    "interface": "/getData"
-                                }
-                            }
-                        },
-                        "1":{
-                            
-                            "ip": "127.0.0.1",
-                            "name": "solar",
-                            "port": 3000,
-                            "actions": {
-                                "getData": {
-                                    "interface": "/getData"
-                                },
-                                "download": {
-                                    "interface": "/download"
-                                },
-                                "upload": {
-                                    "interface": "/upload"
-                                }
-                            }
-                        },
-                        "2": {
-                            "ip": "127.0.0.1",
-                            "name": "robot_001",
-                            "port": 2000,
-                            "actions": {
-                                "getData": {
-                                    "interface": "/getData"
-                                }
-                            }
-                        },
-                        "3": {
-                            "ip": "127.0.0.1",
-                            "name": "robot_002",
-                            "port": 2000,
-                            "actions": {
-                                "getData": {
-                                    "interface": "/getData"
-                                }
-                            }
-                        },
-                        "4": {
-                            "ip": "127.0.0.1",
-                            "name": "rebot_003",
-                            "port": 2000,
-                            "actions": {
-                                "getData": {
-                                    "interface": "/getData"
-                                }
-                            }
-                        }
-                    },
-                    "edges_number": 5,
-                    "interval_sec_": 3
-                },
-                "model_name": "edge_monitor"
-            },
             "4": {
                 "model_args": {
                     "port": 9999
                 },
                 "model_name": "rest_api"
-            },
-            "5": {
-                "model_args": {
-                    "interval_sec_": 3,
-                    "simple_json4log": true
-                },
-                "model_name": "heartbeat",
-                "step_time_interval": 2
             }
         }
     }
