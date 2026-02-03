@@ -39,7 +39,8 @@ private:
     // 递归解析 JSON 参数并按格式打印日志
     void LogRecursive(const std::string& prefix, const nlohmann::json& j);
     void LogArg(const std::string& name, const std::string& value);
-
+    // 启动机器人：负责启动配置文件中传入的各种模块
+    void LaunchRoBot();
     // --- 各个模块独立的启动函数 (你可以在这里编写具体的业务逻辑) ---
     void LaunchHeartbeat(const nlohmann::json& args);
     void LaunchComm(const nlohmann::json& args);

@@ -65,16 +65,11 @@ void Pipeline::Init(const nlohmann::json& config) {
     MYLOG_INFO("------------------------------------------------------------");
 }
 
-void Pipeline::Start() {
-    // 1. 状态检查与原子锁保护
-    MYLOG_INFO("* Arg: {}, Value: {}", "启动状态", "开始尝试启动 Pipeline 模块...");
-    if (is_running_.exchange(true)) {
-        MYLOG_INFO("* Arg: {}, Value: {}", "启动跳过", "Pipeline 已经在运行中，无需重复启动");
-        return;
-    }
-
+void Pipeline::LaunchRoBot() {
+    MYLOG_INFO("Launching RoBot modules...");
+    // 这里可以添加具体的启动逻辑
     try {
-        // 2. 配置项存在性校验
+        // 配置项存在性校验
         if (!config_data_.contains("executes") || !config_data_["executes"].is_object()) {
             MYLOG_INFO("* Arg: {}, Value: {}", "配置错误", "未找到有效的 'executes' 节点列表，启动终止");
             is_running_ = false;
@@ -87,7 +82,7 @@ void Pipeline::Start() {
         int step_time_interval  = 3;                            // 默认间隔时间
 
         MYLOG_INFO("* Arg: {}, Value: {}", "流程分发", "准备遍历执行节点，节点总数预测: " + std::to_string(executes.size()));
-
+        
         // 3. 遍历执行节点
         for (auto it = executes.begin(); it != executes.end(); ++it) {
             MYLOG_INFO("-----------------------------------正在启动节点 {} -------", it.key());
@@ -115,34 +110,16 @@ void Pipeline::Start() {
                 MYLOG_WARN("* Arg: {}, Value: {}", "节点分发开始", "正在启动节点[" + node_index + "] 模块名称 >>> " + model_name + " <<<");
 
                 // --- 业务逻辑分发 ---
-                if (model_name == "heartbeat") {
-                    LaunchHeartbeat(model_args);
-                    success_count++;
-                } else if (model_name == "mqtt_comm") {
-                    LaunchMQTTComm(model_args);
-                    success_count++;
-                } else if (model_name == "comm") {
-                    LaunchComm(model_args);
-                    success_count++;
-                } else if (model_name == "system_healthy") {
-                    LaunchSystemHealthy(model_args);
-                    success_count++;
-                } else if (model_name == "edge_monitor") {
-                    LaunchEdgeMonitor(model_args);
-                    success_count++;
-                } else if (model_name == "rest_api") {
-                    LaunchRestAPI(model_args);
-                    success_count++;
-                } else if (model_name == "edge") {
-                    LaunchEdge(model_args);
-                    success_count++;
-                } else if (model_name == "MQTTBroker") {
-                    LaunchMyMqttBroker(model_args);
-                    success_count++;
-                } else {
-                    MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);
-                }
-
+                if (model_name == "heartbeat") { LaunchHeartbeat(model_args); success_count++;}
+                else if (model_name == "mqtt_comm") { LaunchMQTTComm(model_args); success_count++;}
+                else if (model_name == "comm") { LaunchComm(model_args); success_count++;}
+                else if (model_name == "system_healthy") { LaunchSystemHealthy(model_args); success_count++;}
+                else if (model_name == "edge_monitor") { LaunchEdgeMonitor(model_args); success_count++;}
+                else if (model_name == "rest_api") { LaunchRestAPI(model_args); success_count++;}
+                else if (model_name == "edge") { LaunchEdge(model_args); success_count++;}
+                else if (model_name == "MQTTBroker") { LaunchMyMqttBroker(model_args); success_count++;}
+                else { MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);}
+                
                 MYLOG_INFO("* Arg: {}, Value: {}", "节点分发完成", "节点[" + node_index + "] 已成功加入监听列表");
 
                 // 节点间等待，避免资源争抢
@@ -173,6 +150,51 @@ void Pipeline::Start() {
         is_running_ = false;
         MYLOG_INFO("* Arg: {}, Value: {}", "Pipeline核心崩溃", std::string("致命错误: ") + e.what());
     }
+    MYLOG_INFO("RoBot launched successfully.");
+}
+
+
+void Pipeline::Start() {
+    // 1. 状态检查与原子锁保护
+    MYLOG_INFO("* Arg: {}, Value: {}", "启动状态", "开始尝试启动 Pipeline 模块...");
+    if (is_running_.exchange(true)) {
+        MYLOG_INFO("* Arg: {}, Value: {}", "启动跳过", "Pipeline 已经在运行中，无需重复启动");
+        return;
+    }
+
+    try {
+        // 2. 配置项存在性校验
+        if (!config_data_.contains("executes") || !config_data_["executes"].is_object()) {
+            MYLOG_INFO("* Arg: {}, Value: {}", "配置错误", "未找到有效的 'executes' 节点列表，启动终止");
+            is_running_ = false;
+            return;
+        }
+
+        const auto& executes    = config_data_["executes"];     // 执行节点列表
+        int total_nodes         = 0;                            // 总节点计数
+        int success_count       = 0;                            // 成功启动的节点计数
+        int step_time_interval  = 3;                            // 默认间隔时间
+
+        MYLOG_INFO("* Arg: {}, Value: {}", "流程分发", "准备遍历执行节点，节点总数预测: " + std::to_string(executes.size()));
+        // 3. 显示启动信息
+        MYLOG_INFO("------------------------------------------------------------(启动节点列表)");
+        for (auto it = executes.begin(); it != executes.end(); ++it) {
+            std::string node_index = it.key();
+            total_nodes++;
+            // MYLOG_INFO("* Arg: {}, Value: {}", item.key(), item.value().dump());
+            MYLOG_INFO("* Arg: {}, Value: {}", "节点序号", node_index);
+            MYLOG_INFO("* Arg: {}, Value: {}", "节点名称", it.value().value("model_name", "未知模型"));
+            MYLOG_INFO("===================================================");
+        }
+        MYLOG_INFO("------------------------------------------------------------(启动节点列表结束)");
+        // 4. 启动机器人
+        LaunchRoBot();
+    } catch (const std::exception& e) {
+        // 捕获可能导致的循环中断的顶层异常
+        is_running_ = false;
+        MYLOG_INFO("* Arg: {}, Value: {}", "Pipeline核心崩溃", std::string("致命错误: ") + e.what());
+    }
+    MYLOG_INFO("* Arg: {}, Value: {}", "启动完成", "Pipeline 模块已成功启动。");
 }
 
 // --- 模块逻辑实现区 ---
@@ -355,10 +377,10 @@ void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
 
     // 注册消息回调等（如果需要）
     // // mqtt_service.SetMessageCallback(...);
-    // mqtt_service.AddRoute("/do_operation", [](const std::string& topic, const std::string& payload) {
-    //     MYLOG_INFO("MQTTComm 收到操作请求，Topic: {}, Payload: {}", topic, payload);
-    //     // 处理操作请求的逻辑
-    // });
+    mqtt_service.AddRoute("/system/heartbeats/do_operation", [](const std::string& topic, const std::string& payload) {
+        MYLOG_INFO("MQTTComm 收到操作请求，Topic: {}, Payload: {}", topic, payload);
+        // 处理操作请求的逻辑
+    });
     
     // 注入 publisher 适配器（heartbeat 只看到 IMqttPublisher）
     my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());
