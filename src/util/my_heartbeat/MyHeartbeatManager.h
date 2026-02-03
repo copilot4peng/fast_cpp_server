@@ -42,6 +42,7 @@ public:
      * @return nlohmann::json 
      */
     nlohmann::json GetHeartbeatSnapshot();
+    nlohmann::json GetInitConfig();
     
 private:
     HeartbeatManager() = default;

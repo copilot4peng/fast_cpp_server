@@ -55,4 +55,20 @@ MyAPIResponsePtr HeartBeatController::postHeartbeat(
     return createDtoResponse(Status::CODE_200, result);
 }
 
+
+MyAPIResponsePtr HeartBeatController::getHeartbeatConfig() {
+    MYLOG_INFO("[API] Heartbeat GET Config");
+
+    nlohmann::json config = HeartbeatManager::GetInstance().GetInitConfig();
+
+    auto dto = my_api::dto::HeartbeatDto::createShared();
+    dto->from = "HeartbeatManager";
+    dto->timestamp = static_cast<v_int64>(std::time(nullptr));
+    dto->status = "config";
+    dto->heartbeat = config.dump();
+
+    return createDtoResponse(Status::CODE_200, dto);
+}
+
+
 } // namespace my_api::heartbeat

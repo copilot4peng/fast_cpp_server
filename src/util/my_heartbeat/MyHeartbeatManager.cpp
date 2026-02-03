@@ -179,6 +179,8 @@ void HeartbeatManager::SendOnceByMQTT() {
     if (!pub) {
         MYLOG_WARN("HeartbeatManager SendOnce: publisher not injected, skip mqtt publish");
         return;
+    } else {
+        MYLOG_DEBUG("HeartbeatManager SendOnce: publisher available, proceed mqtt publish");
     }
 
     // build minimal payload
@@ -216,6 +218,10 @@ void HeartbeatManager::SendOnceByMQTT() {
     }
 }
 
+nlohmann::json HeartbeatManager::GetInitConfig() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return config_;
+}
 
 void HeartbeatManager::SendHeartbeat() {
     // 仍保留你原来的 log 行为（注意：heartbeat_data_ 结构已变为 {base, extra, edge_*}）

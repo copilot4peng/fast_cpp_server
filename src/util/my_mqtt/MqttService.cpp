@@ -353,4 +353,37 @@ bool PublisherAdapter::Publish(const std::string& topic,
     return svc_.Publish(topic, payload, qos, retain);
 }
 
+
+const nlohmann::json MqttService::GetConfig() {
+    MYLOG_INFO("MqttService GetConfig called");
+    try{
+        std::lock_guard<std::mutex> lock(mtx_);
+        MYLOG_INFO("MqttService config: {}", cfg_.dump(4));
+        return cfg_;
+    } catch (...) {
+        MYLOG_WARN("MqttService GetConfig: service not initialized");
+        return nlohmann::json();
+    }
+}
+
+const nlohmann::json MqttService::GetRoutes() {
+    MYLOG_INFO("MqttService GetRoutes called");
+    try {
+        std::lock_guard<std::mutex> lock(mtx_);
+        nlohmann::json routes_json = nlohmann::json::array();
+        for (const auto& r : routes_) {
+            nlohmann::json route;
+            route["filter"] = r.filter;
+            route["qos"] = r.qos;
+            routes_json.push_back(route);
+        }
+        return routes_json;
+
+    } catch (...) {
+        MYLOG_WARN("MqttService GetRoutes: service not initialized");
+        return nlohmann::json();
+    }
+    
+}
+
 } // namespace my_mqtt

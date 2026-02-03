@@ -175,6 +175,7 @@ void Pipeline::Start() {
         int success_count       = 0;                            // 成功启动的节点计数
         int step_time_interval  = 3;                            // 默认间隔时间
 
+        int v = 0x676;
         MYLOG_INFO("* Arg: {}, Value: {}", "流程分发", "准备遍历执行节点，节点总数预测: " + std::to_string(executes.size()));
         // 3. 显示启动信息
         MYLOG_INFO("------------------------------------------------------------(启动节点列表)");
@@ -383,6 +384,7 @@ void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
     });
     
     // 注入 publisher 适配器（heartbeat 只看到 IMqttPublisher）
+    my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());
     my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());
 
     // 启动线程

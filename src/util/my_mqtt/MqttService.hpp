@@ -85,6 +85,9 @@ public:
      */
     std::shared_ptr<IMqttPublisher> GetPublisher();
 
+    const nlohmann::json GetConfig();
+    const nlohmann::json GetRoutes();
+
 private:
     MqttService() = default;                                // 私有构造函数
     ~MqttService();                                         // 私有析构函数
