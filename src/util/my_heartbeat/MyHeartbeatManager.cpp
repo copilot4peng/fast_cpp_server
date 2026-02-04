@@ -10,12 +10,13 @@
 #include "MyEdges.h"
 #include "MyEdgeManager.h"
 #include "MqttService.hpp"
+#include "test.pb.h"
 
 
 namespace my_heartbeat {
 
 using namespace edge_manager;
-
+using namespace MyProto;
 
 HeartbeatManager& HeartbeatManager::GetInstance() {
     static HeartbeatManager inst;
@@ -140,7 +141,7 @@ void HeartbeatManager::BuildHeartbeat() {
 
     // edge info (保持你原有逻辑)
     hb["edge_summary"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
-    hb["edge_managed_devices"] = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
+    // hb["edge_managed_devices"] = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
 
     if (true) {
         heartbeat_data_["edge_summary"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
@@ -200,9 +201,15 @@ void HeartbeatManager::SendOnceByMQTT() {
 
     bool ok = false;
     try {
+        
+        // MyProto::Person ph;
+        // ph.set_name("alice");
+        // ph.set_id(123);
+        // std::string pb_data;
+        // ph.SerializeToString(&pb_data);
+        // ok = pub->Publish(topic, pb_data, qos, retain);
+
         ok = pub->Publish(topic, s, qos, retain);
-        // auto& mqtt = my_mqtt::MqttService::GetInstance();
-        // ok = mqtt.Publish(topic, s, qos, retain);
     } catch (const std::exception& e) {
         MYLOG_ERROR("Heartbeat Publish exception: topic={}, err={}", topic, e.what());
         ok = false;

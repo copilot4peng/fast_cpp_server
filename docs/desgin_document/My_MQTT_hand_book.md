@@ -92,3 +92,4 @@ server.stop();  // 退出时关闭
 * **线程安全** : `publish` 接口是线程安全的，可以在任意线程调用。
 * **单例限制** : `MFSMQTTClient` 在调用 `init` 前不可进行 `publish/subscribe` 操作，否则内部 `client_` 指针为空，操作将直接返回 `false`。
 * **环境变量** : `MFMQTTServer` 支持 `${HOME}` 路径解析，方便跨平台部署配置。
+

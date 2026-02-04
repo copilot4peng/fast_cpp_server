@@ -1,9 +1,12 @@
 #include "MyAPI.h"
 
-#include "controller/demo/edge_manager/EdgeController.hpp"
-#include "controller/heartbeat_manager/HeartBeatController.h"
-#include "controller/demo/edges/EdgesController.hpp"
 
+#include "controller/heartbeat_manager/HeartBeatController.h"
+#include "controller/script/ScriptController.h"
+
+#include "controller/demo/edges/EdgesController.hpp"
+#include "controller/demo/edge_manager/EdgeController.hpp"
+#include "controller/demo/tuna/TunaController.h"
 
 // #include "oatpp/json/ObjectMapper.hpp" 
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp" 
@@ -87,26 +90,25 @@ void MyAPI::ServerThread(int port) {
         auto router = oatpp::web::server::HttpRouter::createShared();
         auto docEndpoints = oatpp::web::server::api::Endpoints();
 
-        auto edgeController = my_api::edge_manager::EdgeController::createShared(
-            std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper)
-        );
+        auto edgeController = my_api::edge_manager::EdgeController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         router->addController(edgeController);
         docEndpoints.append(edgeController->getEndpoints());
 
-
-        auto heartbeatController =
-        my_api::heartbeat::HeartBeatController::createShared(
-            std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper)
-        );
-
+        auto heartbeatController = my_api::heartbeat::HeartBeatController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         router->addController(heartbeatController);
         docEndpoints.append(heartbeatController->getEndpoints());
 
-        auto edgesController = my_api::edge::EdgesController::createShared(
-            std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper)
-        );
+        auto edgesController = my_api::edge::EdgesController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         router->addController(edgesController);
         docEndpoints.append(edgesController->getEndpoints());
+
+        auto scriptController = my_api::my_script_api::MyScriptController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        router->addController(scriptController);
+        docEndpoints.append(scriptController->getEndpoints());
+
+        auto tunaController = my_api::tuna::TunaController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        router->addController(tunaController);
+        docEndpoints.append(tunaController->getEndpoints());
 
         auto swaggerController = oatpp::swagger::Controller::createShared(docEndpoints, docInfo, swaggerResources);
         router->addController(swaggerController);
