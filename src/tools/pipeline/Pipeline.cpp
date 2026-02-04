@@ -383,6 +383,15 @@ void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
         // 处理操作请求的逻辑
     });
     
+    // MyProto::Person ph;
+    // std::string pb_data = "";
+    // ph.SerializeToString(&pb_data);
+    // while (true) {
+    //     mqtt_service.Publish("/test/ph_data", pb_data, false, 1);
+    //     std::this_thread::sleep_for(std::chrono::seconds(1));
+    // }
+    
+
     // 注入 publisher 适配器（heartbeat 只看到 IMqttPublisher）
     my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());
     my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());

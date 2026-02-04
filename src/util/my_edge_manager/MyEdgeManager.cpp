@@ -1,4 +1,5 @@
 #include "MyEdgeManager.h"
+#include "MyLog.h"
 
 namespace edge_manager {
 
@@ -21,11 +22,11 @@ void MyEdgeManager::Init(const nlohmann::json& args) {
 nlohmann::json MyEdgeManager::ShowEdgesStatus() {
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     nlohmann::json report = nlohmann::json::array();
-    
+    MYLOG_INFO("device_map_ size: {}", device_map_.size());
     for (auto& pair : device_map_) {
+        MYLOG_INFO("Gathering status for device: {}", pair.first);
         report.push_back(pair.second->GetFullStatus());
     }
-    
     MYLOG_INFO("[StatusReport] 当前边缘设备快照: {}", report.dump());
     return report;
 }

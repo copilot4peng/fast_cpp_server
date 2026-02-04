@@ -31,6 +31,7 @@ target_link_libraries(${TEST_PROGRAM_NAME} PRIVATE
     my_device
     my_data
     my_db
+    my_script
     my_soft_healthy
     my_system_healthy
     symengine              # 修复 symengine/expression.h 找不到
