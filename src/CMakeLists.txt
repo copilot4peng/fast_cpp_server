@@ -118,6 +118,7 @@ target_link_libraries(mylib PUBLIC my_api)
 target_link_libraries(mylib PUBLIC my_mqtt)
 target_link_libraries(mylib PUBLIC my_mqtt_broker_manager)
 target_link_libraries(mylib PUBLIC myproto)
+target_link_libraries(mylib PUBLIC my_mavsdk)
 target_link_libraries(mylib PUBLIC cpr::cpr)
 target_link_libraries(mylib PUBLIC libzmq)
 target_link_libraries(mylib PUBLIC pthread)
@@ -125,6 +126,11 @@ target_link_libraries(mylib PRIVATE my_soft_healthy)
 target_link_libraries(mylib PRIVATE my_system_healthy)
 target_link_libraries(mylib PRIVATE symengine)
 target_link_libraries(mylib PRIVATE sqlite3_static)
-
+target_link_libraries(mylib PRIVATE
+    ${PROJECT_SOURCE_DIR}/build/mavsdk_dist/lib/libmavsdk.a
+    ${PROJECT_SOURCE_DIR}/build/mavsdk_dist/lib/libevents.a
+    nlohmann_json::nlohmann_json
+    pthread
+)
 print_colored_message("Adding mylib library with sources over" COLOR yellow)
 print_colored_message("------------------------------" COLOR magenta)

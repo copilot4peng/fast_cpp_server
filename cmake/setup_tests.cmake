@@ -34,6 +34,7 @@ target_link_libraries(${TEST_PROGRAM_NAME} PRIVATE
     my_script
     my_soft_healthy
     my_system_healthy
+    my_mavsdk
     symengine              # 修复 symengine/expression.h 找不到
     opencv_core            # 修复 opencv2/opencv.hpp 找不到
     opencv_imgproc
