@@ -28,7 +28,10 @@ else()
         list(APPEND THIRD_INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/external/symengine")
     endif()
 endif()
-
+list(APPEND THIRD_INCLUDE_DIRECTORIES 
+    ${CMAKE_SOURCE_DIR}/external/symengine
+    ${CMAKE_SOURCE_DIR}/build/external/symengine
+)
 list(APPEND THIRD_PARTY_INCLUDES 
     ${CMAKE_SOURCE_DIR}/external/symengine
     ${CMAKE_SOURCE_DIR}/build/external/symengine

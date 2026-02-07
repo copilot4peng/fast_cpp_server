@@ -359,4 +359,4 @@ else
   echo "📁 Failed to create releases directory. ❌"
 fi
 
-./scripts/build_mavsdk.sh
+./scripts/build_mavsdk_v3.sh

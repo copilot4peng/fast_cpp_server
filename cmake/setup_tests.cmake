@@ -66,6 +66,8 @@ target_link_libraries(${TEST_PROGRAM_NAME} PRIVATE
 target_include_directories(${TEST_PROGRAM_NAME} PRIVATE 
     ${THIRD_INCLUDE_DIRECTORIES}
     ${ALL_INCLUDE_DIRS}    # 使用我们在 src/CMakeLists.txt 中搜集的路径
+    ${PROJECT_BINARY_DIR}/external/symengine
+    ${PROJECT_BINARY_DIR}/external/symengine/symengine/utilities/teuchos
 )
 
 include(GoogleTest)
