@@ -177,9 +177,9 @@ void MyMavVehicle::MonitorThreadFunc() {
 
 // ---------------- 外部接口实现 ----------------
 
-VehicleStatus MyMavVehicle::GetStatus() const {
+MavVehicleStatus MyMavVehicle::GetStatus() const {
     std::lock_guard<std::mutex> lock(data_mutex_);
-    VehicleStatus status;
+    MavVehicleStatus status;
     status.connected = (system_ && system_->is_connected());
     status.armed = cached_state_.armed;
     status.flight_mode = cached_state_.mode;

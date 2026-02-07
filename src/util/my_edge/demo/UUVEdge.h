@@ -45,8 +45,8 @@ public:
   std::string EdgeType() const override { return edge_type_; }
 
 private:
-  enum class RunState { Initializing, Ready, Running, Stopping, Stopped };
-  static std::string ToString(RunState s);
+  // enum class RunState { Initializing, Ready, Running, Stopping, Stopped };
+  // static std::string ToString(RunState s);
 
   SubmitResult MakeResult(SubmitCode code, const std::string& msg,
                           const my_data::RawCommand& cmd,
