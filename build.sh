@@ -358,3 +358,5 @@ elif mkdir releases; then
 else
   echo "📁 Failed to create releases directory. ❌"
 fi
+
+./scripts/build_mavsdk.sh
