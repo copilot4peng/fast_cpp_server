@@ -212,6 +212,25 @@ else
   echo "⬇️ Failed to download eigen. ❌"
 fi
 
+MAVSDK_DIR="external/mavsdk_v3"
+TAG="v3.15.0"
+
+if [ -d "$MAVSDK_DIR" ]; then
+  echo "⬇️ $MAVSDK_DIR already exists. ✅"
+else
+  echo "⬇️ Cloning MAVSDK $TAG..."
+  # -b 既可以指定分支，也可以指定 Tag
+  # --depth 1 大幅减少下载量，只拉取当前版本
+  if git clone --depth 1 --branch "$TAG" --recurse-submodules https://github.com/mavlink/MAVSDK.git "$MAVSDK_DIR"; then
+    echo "⬇️ MAVSDK ($TAG) cloned successfully. ✅"
+  else
+    echo "⬇️ Clone failed, cleaning up. ❌"
+    rm -rf "$MAVSDK_DIR" || true
+    exit 1
+  fi
+fi
+
+
 # 下载 OpenCV
 if [ -d "external/opencv" ]; then
   echo "⬇️ Directory 'external/opencv' already exists. ✅"
@@ -247,22 +266,6 @@ elif git clone https://github.com/symengine/symengine.git external/symengine; th
 else
   echo "⬇️ Failed to download SymEngine. ❌"
 fi
-
-# # 下载 oatpp 核心库
-# if [ -d "external/oatpp" ]; then
-#   echo "⬇️ Directory 'external/oatpp' already exists. ✅"
-# else
-#   echo "⬇️ Downloading oatpp/oatpp..."
-#   git clone --depth 1 https://github.com/oatpp/oatpp.git external/oatpp
-# fi
-
-# # 下载 oatpp-swagger 扩展模块
-# if [ -d "external/oatpp-swagger" ]; then
-#   echo "⬇️ Directory 'external/oatpp-swagger' already exists. ✅"
-# else
-#   echo "⬇️ Downloading oatpp/oatpp-swagger..."
-#   git clone --depth 1 https://github.com/oatpp/oatpp-swagger.git external/oatpp-swagger
-# fi
 
 # 定义统一的版本号，方便以后升级
 OATPP_VERSION="1.3.1"
@@ -355,3 +358,5 @@ elif mkdir releases; then
 else
   echo "📁 Failed to create releases directory. ❌"
 fi
+
+./scripts/build_mavsdk.sh
