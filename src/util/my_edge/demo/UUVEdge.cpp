@@ -36,16 +36,16 @@ UUVEdge::~UUVEdge() {
   MYLOG_INFO("[Edge:{}] 析构完成 (UUVEdge)", edge_id_);
 }
 
-std::string UUVEdge::ToString(RunState s) {
-  switch (s) {
-    case RunState::Initializing: return "Initializing";
-    case RunState::Ready: return "Ready";
-    case RunState::Running: return "Running";
-    case RunState::Stopping: return "Stopping";
-    case RunState::Stopped: return "Stopped";
-    default: return "UnknownRunState";
-  }
-}
+// std::string UUVEdge::RunStateToString(RunState s) {
+//   switch (s) {
+//     case RunState::Initializing: return "Initializing";
+//     case RunState::Ready: return "Ready";
+//     case RunState::Running: return "Running";
+//     case RunState::Stopping: return "Stopping";
+//     case RunState::Stopped: return "Stopped";
+//     default: return "UnknownRunState";
+//   }
+// }
 
 SubmitResult UUVEdge::MakeResult(SubmitCode code, const std::string& msg,
                                  const my_data::RawCommand& cmd,
@@ -180,7 +180,7 @@ bool UUVEdge::Init(const nlohmann::json& cfg, std::string* err) {
       MYLOG_INFO("[Edge:{}] 创建设备成功：device_id={}, type={}", edge_id_, device_id, type);
       run_state_ = RunState::Ready;
       MYLOG_INFO("[Edge:{}] Device Init 成功：devices={}, queues={}, run_state={}",
-             edge_id_, devices_.size(), queues_.size(), ToString(run_state_.load()));
+             edge_id_, devices_.size(), queues_.size(), RunStateToString(run_state_.load()));
     } catch (const std::exception& e) {
       std::string emsg = "exception caught: ";
       emsg += e.what();
@@ -199,7 +199,7 @@ bool UUVEdge::Start(std::string* err) {
   std::unique_lock<std::shared_mutex> lk(rw_mutex_);
 
   if (run_state_.load() != RunState::Ready) {
-    std::string e = "Start rejected: run_state=" + ToString(run_state_.load());
+    std::string e = "Start rejected: run_state=" + RunStateToString(run_state_.load());
     if (err) *err = e;
     MYLOG_WARN("[Edge:{}] {}", edge_id_, e);
     return false;
@@ -231,7 +231,7 @@ bool UUVEdge::Start(std::string* err) {
   }
 
   run_state_ = RunState::Running;
-  MYLOG_INFO("[Edge:{}] Start 成功：run_state={}", edge_id_, ToString(run_state_.load()));
+  MYLOG_INFO("[Edge:{}] Start 成功：run_state={}", edge_id_, RunStateToString(run_state_.load()));
 
   // start snapshot thread after running
   StartStatusSnapshotThreadLocked();
@@ -249,7 +249,7 @@ SubmitResult UUVEdge::Submit(const my_data::RawCommand& cmd) {
   RunState rs = run_state_.load();
   if (rs != RunState::Running) {
     auto r = MakeResult(SubmitCode::NotRunning,
-                        "edge is not running, run_state=" + ToString(rs),
+                        "edge is not running, run_state=" + RunStateToString(rs),
                         cmd);
     MYLOG_WARN("[Edge:{}] Submit 拒绝：{}", edge_id_, r.toString());
     return r;
@@ -471,7 +471,7 @@ void UUVEdge::Shutdown() {
   RunState rs = run_state_.load();
   if (rs == RunState::Stopped || rs == RunState::Stopping) return;
 
-  MYLOG_WARN("[Edge:{}] Shutdown 开始：run_state={}", edge_id_, ToString(rs));
+  MYLOG_WARN("[Edge:{}] Shutdown 开始：run_state={}", edge_id_, RunStateToString(rs));
   run_state_ = RunState::Stopping;
 
   // stop snapshot thread first (avoid concurrent access after clearing maps)
@@ -504,7 +504,7 @@ void UUVEdge::Shutdown() {
   normalizers_by_type_.clear();
 
   run_state_ = RunState::Stopped;
-  MYLOG_WARN("[Edge:{}] Shutdown 完成：run_state={}", edge_id_, ToString(run_state_.load()));
+  MYLOG_WARN("[Edge:{}] Shutdown 完成：run_state={}", edge_id_, RunStateToString(run_state_.load()));
 }
 
 
@@ -554,7 +554,7 @@ nlohmann::json UUVEdge::DumpInternalInfo() const {
   edgeInfo["edge_id"] = edge_id_;
   edgeInfo["edge_type"] = edge_type_;
   edgeInfo["version"] = version_;
-  edgeInfo["run_state"] = ToString(run_state_.load());
+  edgeInfo["run_state"] = RunStateToString(run_state_.load());
   edgeInfo["estop_active"] = estop_.load();
 
   // 获取任务队列信息

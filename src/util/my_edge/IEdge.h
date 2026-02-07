@@ -70,6 +70,29 @@ inline std::string ToString(SubmitCode c) {
 }
 
 /**
+ * @brief Edge 运行状态（用于区分 Init/Start 阶段，以及运行中状态）
+ * 
+ * - Initializing: 正在 Init，尚未准备好接受命令
+ * - Ready: Init 完成，已准备好接受命令，但尚未 Start
+ * - Running: 已 Start，正常运行中
+ * - Stopping: 收到停止信号，正在停止中（拒绝新命令，等待设备/队列清理完成）
+ * - Stopped: 已完全停止，所有设备/队列已清理完成
+ */
+enum class RunState { Initializing, Ready, Running, Stopping, Stopped };
+
+
+static std::string RunStateToString(RunState s) {
+    switch (s) {
+        case RunState::Initializing: return "Initializing";
+        case RunState::Ready: return "Ready";
+        case RunState::Running: return "Running";
+        case RunState::Stopping: return "Stopping";
+        case RunState::Stopped: return "Stopped";
+        default: return "UnknownRunState";
+    }
+}
+
+/**
  * @brief Edge Runtime 接口（Init/Start 分离）
  */
 class IEdge {

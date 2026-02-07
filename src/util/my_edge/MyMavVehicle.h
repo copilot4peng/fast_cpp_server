@@ -17,7 +17,7 @@
 namespace my_edge {
 
 // 定义状态结构体
-struct VehicleStatus {
+struct MavVehicleStatus {
     bool connected = false;          // 是否在线（有心跳）
     bool armed = false;              // 是否解锁
     std::string flight_mode = "N/A"; // 飞行模式
@@ -52,7 +52,7 @@ public:
     // --------------------------------------------------------
 
     // 获取当前完整状态
-    VehicleStatus GetStatus() const;
+    MavVehicleStatus GetStatus() const;
 
     // 是否已连接（有心跳）
     bool IsConnected() const;
