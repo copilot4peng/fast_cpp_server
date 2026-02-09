@@ -139,14 +139,10 @@ void HeartbeatManager::BuildHeartbeat() {
     hb["base"] = base;
     hb["extra"] = config_.value("extra", nlohmann::json::object());
 
-    // edge info (保持你原有逻辑)
-    hb["edge_summary"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
-    // hb["edge_managed_devices"] = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
-
     if (true) {
         heartbeat_data_["edge_summary"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
     }
-    if (true) {
+    if (false) {
         heartbeat_data_["edge_managed_devices"] = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
     }
     // finally update heartbeat_data_ with lock

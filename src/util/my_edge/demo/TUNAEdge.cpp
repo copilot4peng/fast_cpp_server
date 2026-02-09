@@ -616,4 +616,14 @@ bool TUNAEdge::AppendTaskToTargetTaskQueue(const my_data::DeviceId& device_id, c
     return result;
 }
 
+my_data::EdgeId TUNAEdge::Id() const {
+    std::shared_lock<std::shared_mutex> lk(rw_mutex_);
+    return edge_id_;
+}
+
+std::string TUNAEdge::EdgeType() const {
+    std::shared_lock<std::shared_mutex> lk(rw_mutex_);
+    return edge_type_;
+}
+
 } // namespace my_edge::demo

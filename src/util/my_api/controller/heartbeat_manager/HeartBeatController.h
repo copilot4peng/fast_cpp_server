@@ -18,12 +18,25 @@ public:
     static std::shared_ptr<HeartBeatController>
     createShared(const std::shared_ptr<ObjectMapper>& objectMapper);
 
-    // 服务存活检查
-    ENDPOINT("GET", "/v1/heartbeat", getHeartbeat);
+    ENDPOINT_INFO(getHeartbeatOnline) {
+        info->summary = "心跳检查接口";
+        info->description = "用于检查服务是否存活，返回简单的状态信息。";
+        info->addResponse<oatpp::String>(Status::CODE_200, "application/json");
+    }
+    ENDPOINT("GET", "/v1/heartbeat/online", getHeartbeatOnline);
 
-    // 心跳上报
-    ENDPOINT("POST", "/v1/heartbeat", postHeartbeat,
-             BODY_DTO(oatpp::Object<my_api::dto::HeartbeatDto>, heartbeat));
+    ENDPOINT_INFO(getHeartbeatData) {
+        info->summary = "获取心跳数据";
+        info->description = "根据请求参数获取系统当前的心跳数据，包含系统状态、边缘设备状态等信息。";
+        info->addConsumes<oatpp::String>("application/json");
+        info->addResponse<oatpp::String>(Status::CODE_200, "application/json");
+        info->addResponse<oatpp::String>(Status::CODE_400, "application/json");
+    }
+    ENDPOINT(
+        "GET", 
+        "/v1/heartbeat/getHeartbeatJsonData", 
+        getHeartbeatData
+    );
 
     // 获取心跳启动参数
     ENDPOINT("GET", "/v1/heartbeat/config", getHeartbeatConfig);

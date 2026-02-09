@@ -128,19 +128,13 @@ void MyMavVehicle::InitPlugins() {
 
 void MyMavVehicle::CleanupSystem() {
     std::lock_guard<std::mutex> lock(data_mutex_);
-    
-    // 释放插件
-    telemetry_ = nullptr;
-    action_ = nullptr;
-    manual_control_ = nullptr;
-    
-    // 释放系统引用，允许 MAVSDK 发现新系统
-    system_ = nullptr;
-    
-    // 重置状态
-    cached_state_.armed = false;
-    cached_state_.mode = "DISCONNECTED";
-    cached_state_.sys_id = 0;
+    telemetry_              = nullptr;          // 释放插件
+    action_                 = nullptr;          // 释放插件
+    manual_control_         = nullptr;          // 释放插件
+    system_                 = nullptr;          // 释放系统引用，允许 MAVSDK 发现新系统
+    cached_state_.armed     = false;            // 重置状态
+    cached_state_.mode      = "DISCONNECTED";   // 重置状态
+    cached_state_.sys_id    = 0;                // 重置状态
 }
 
 void MyMavVehicle::MonitorThreadFunc() {

@@ -9,6 +9,7 @@
 #include "MqttService.hpp"
 #include "MyAPI.h"
 #include "MyLog.h"
+#include "MyTools.h"
 
 #include <cstring>
 #include <system_error>
@@ -26,6 +27,7 @@
 namespace tools {
 namespace pipeline {
 
+using namespace my_tools;
 using namespace my_edge;
 using namespace my_heartbeat;
 
@@ -262,51 +264,6 @@ void Pipeline::LaunchEdgeMonitor(const nlohmann::json& args) {
 
 }
 
-// 返回 true 表示端口可用（可在本进程 bind），false 表示不可用或检测出错（视为占用）
-bool Pipeline::is_port_available(int port) {
-    // 创建 IPv4 TCP socket
-    int sock = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        MYLOG_WARN("检测端口 {} 时创建 socket 失败: {}，视为不可用", port, std::strerror(errno));
-        return false;
-    }
-
-    // 允许快速重用地址（不影响判断）
-    int opt = 1;
-    (void)setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    struct sockaddr_in addr;
-    std::memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY); // 0.0.0.0
-    addr.sin_port = htons(static_cast<uint16_t>(port));
-
-    // 尝试 bind
-    int ret = ::bind(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
-    if (ret == 0) {
-        // bind 成功，说明端口暂时可用；释放 socket 后返回 true
-        ::close(sock);
-        return true;
-    } else {
-        // bind 失败，检查 errno
-        int err = errno;
-        if (err == EADDRINUSE) {
-            // 明确被占用
-            ::close(sock);
-            return false;
-        } else if (err == EACCES) {
-            // 权限问题（端口 <1024 或权限限制），视为不可用
-            MYLOG_WARN("检测端口 {} 时权限受限: {}，视为不可用", port, std::strerror(err));
-            ::close(sock);
-            return false;
-        } else {
-            // 其它错误，记录并视为不可用
-            MYLOG_WARN("检测端口 {} 时 bind 出错: {}，视为不可用", port, std::strerror(err));
-            ::close(sock);
-            return false;
-        }
-    }
-}
 
 // 在 Pipeline.cpp 的模块逻辑实现区添加
 void Pipeline::LaunchRestAPI(const nlohmann::json& args) {
@@ -320,7 +277,7 @@ void Pipeline::LaunchRestAPI(const nlohmann::json& args) {
         // 2. 等待端口可用（检查 + 重试）
         const std::chrono::seconds retry_interval(5);
         while (true) {
-            if (is_port_available(port)) {
+            if (my_tools::isPortAvailable(port)) {
                 MYLOG_INFO("* 模块: {}, 端口 {} 当前可用，准备启动", module_name, port);
                 // 尝试启动（Start 内部可能会 bind 并启动线程）
                 try {
