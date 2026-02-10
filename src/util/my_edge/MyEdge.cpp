@@ -2,7 +2,7 @@
 
 #include "demo/UUVEdge.h"
 #include "demo/TUNAEdge.h"
-
+#include "demo/UAVEdge.h"
 namespace my_edge {
 
 MyEdge& MyEdge::GetInstance() {
@@ -52,6 +52,18 @@ std::unique_ptr<IEdge> MyEdge::Create(const std::string& type, const nlohmann::j
         *err = std::string("Failed to create TUNA edge: ") + e.what();
       }
       MYLOG_ERROR("[MyEdge] Create TUNA edge failed: {}", e.what());
+      return nullptr;
+    }
+  }
+
+  if ("uav" == type || "UAV" == type) {
+    try {
+      return std::make_unique<my_edge::demo::UAVEdge>(cfg, err);
+    } catch (const std::exception& e) {
+      if (err) {
+        *err = std::string("Failed to create UAV edge: ") + e.what();
+      }
+      MYLOG_ERROR("[MyEdge] Create UAV edge failed: {}", e.what());
       return nullptr;
     }
   }

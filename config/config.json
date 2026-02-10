@@ -74,7 +74,7 @@
                     "edge_number": 2,
                     "edge_create_args": [
                         {
-                            "edge_type": "UUV",
+                            "edge_type": "UAV",
                             "edge_id": "uuv_001",
                             "name": "uuv_001",
                             "version": "0.1.0",

@@ -3,10 +3,12 @@
 #include <chrono>
 
 #include "JsonUtil.h"
+#include "MyDevice.h"
 
 namespace my_edge {
 
 using namespace my_data;
+using namespace my_device;
 
 BaseEdge::BaseEdge() {
   MYLOG_INFO("[BaseEdge] 构造完成，默认 edge_type={}", edge_type_);
@@ -541,7 +543,9 @@ void BaseEdge::SnapshotLoop() {
     }
 
     int interval = snapshot_interval_ms_;
-    if (interval < 200) interval = 200;
+    if (interval < 2002) {
+        interval = 2002;
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(interval));
   }
 
@@ -550,14 +554,14 @@ void BaseEdge::SnapshotLoop() {
 
 void BaseEdge::ReportHeartbeatLocked() {
   // 默认只输出日志，后续你可以接入 MQTT/HTTP 上报
-  my_data::EdgeStatus st = GetStatusSnapshot();
-  MYLOG_INFO("[Edge:{}] 心跳：run_state={}, estop={}, pending_total={}, running_total={}",
-             edge_id_,
-             st.run_state == my_data::EdgeRunState::Running ? "Running" :
-             (st.run_state == my_data::EdgeRunState::EStop ? "EStop" : "Other"),
-             st.estop_active ? "true" : "false",
-             st.tasks_pending_total,
-             st.tasks_running_total);
+//   my_data::EdgeStatus st = GetStatusSnapshot();
+//   MYLOG_INFO("[Edge:{}] 心跳：run_state={}, estop={}, pending_total={}, running_total={}",
+//              edge_id_,
+//              st.run_state == my_data::EdgeRunState::Running ? "Running" :
+//              (st.run_state == my_data::EdgeRunState::EStop ? "EStop" : "Other"),
+//              st.estop_active ? "true" : "false",
+//              st.tasks_pending_total,
+//              st.tasks_running_total);
 }
 
 } // namespace my_edge
