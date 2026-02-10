@@ -18,10 +18,18 @@
 // #include "oatpp/Environment.hpp"
 #include "oatpp/core/base/Environment.hpp"
 #include "oatpp/web/server/interceptor/RequestInterceptor.hpp"
+
+#include "BaseApiController.hpp"
+#include "oatpp/web/server/api/ApiController.hpp"
+#include "oatpp/core/macro/codegen.hpp"
+
 #include "MyINIConfig.h"
 #include "MyLog.h"
 #include <filesystem>
+#include <vector>
 
+
+#include OATPP_CODEGEN_BEGIN(ApiController)
 
 namespace my_api {
 
@@ -87,6 +95,8 @@ void MyAPI::ServerThread(int port) {
             .setVersion("1.0")
             .build();
 
+        std::vector<std::shared_ptr<base::BaseApiController>> objectMappers; // 如果不同控制器需要不同的 ObjectMapper，可以在这里创建并传递
+
         auto router = oatpp::web::server::HttpRouter::createShared();
         auto docEndpoints = oatpp::web::server::api::Endpoints();
 
@@ -112,6 +122,26 @@ void MyAPI::ServerThread(int port) {
 
         auto swaggerController = oatpp::swagger::Controller::createShared(docEndpoints, docInfo, swaggerResources);
         router->addController(swaggerController);
+        // docEndpoints.append(swaggerController->getEndpoints());
+
+        // using MyobjectMapper = oatpp::data::mapping::ObjectMapper;
+        // auto edgeController = my_api::edge_manager::EdgeController::createShared(std::static_pointer_cast<MyobjectMapper>(objectMapper));
+        // auto heartbeatController = my_api::heartbeat::HeartBeatController::createShared(std::static_pointer_cast<MyobjectMapper>(objectMapper));
+        // auto edgesController = my_api::edge::EdgesController::createShared(std::static_pointer_cast<MyobjectMapper>(objectMapper));
+        // auto scriptController = my_api::my_script_api::MyScriptController::createShared(std::static_pointer_cast<MyobjectMapper>(objectMapper));
+        // auto tunaController = my_api::tuna::TunaController::createShared(std::static_pointer_cast<MyobjectMapper>(objectMapper));
+        // auto swaggerController = oatpp::swagger::Controller::createShared(docEndpoints, docInfo, swaggerResources);
+        // objectMappers.push_back(edgeController);
+        // objectMappers.push_back(heartbeatController);
+        // objectMappers.push_back(edgesController);
+        // objectMappers.push_back(scriptController);
+        // objectMappers.push_back(tunaController);
+
+        // for (std::shared_ptr<base::BaseApiController> objectMapper : objectMappers) {
+        //     router->addController(objectMapper);
+        //     docEndpoints.append(objectMapper->getEndpoints());
+        // }
+        // router->addController(swaggerController);
 
         // --- 修正点：ConnectionHandler 只声明一次 ---
         auto connectionHandler = oatpp::web::server::HttpConnectionHandler::createShared(router);

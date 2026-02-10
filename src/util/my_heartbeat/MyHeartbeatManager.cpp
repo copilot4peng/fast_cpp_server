@@ -139,14 +139,10 @@ void HeartbeatManager::BuildHeartbeat() {
     hb["base"] = base;
     hb["extra"] = config_.value("extra", nlohmann::json::object());
 
-    // edge info (保持你原有逻辑)
-    hb["edge_summary"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
-    // hb["edge_managed_devices"] = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
-
     if (true) {
         heartbeat_data_["edge_summary"] = my_edge::MyEdges::GetInstance().GetHeartbeatInfo();
     }
-    if (true) {
+    if (false) {
         heartbeat_data_["edge_managed_devices"] = ::edge_manager::MyEdgeManager::GetInstance().ShowEdgesStatus();
     }
     // finally update heartbeat_data_ with lock
@@ -189,12 +185,12 @@ void HeartbeatManager::SendOnceByMQTT() {
     auto now = std::chrono::system_clock::now();
     auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 
-    payload["version"] = "1.0";
-    payload["source"] = source;
-    payload["type"] = "heartbeat";
-    payload["timestamp"] = ts;
-    payload["seq"] = ++seq_;
-    payload["status"] = "online";
+    payload["version"]      = "1.0";
+    payload["source"]       = source;
+    payload["type"]         = "heartbeat";
+    payload["timestamp"]    = ts;
+    payload["seq"]          = ++seq_;
+    payload["status"]       = "online";
 
     const std::string s = payload.dump();
     const std::string topic = formatTopic(topic_fmt, source);

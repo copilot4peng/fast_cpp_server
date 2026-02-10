@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -68,6 +69,14 @@ private:
   void StartStatusSnapshotThreadLocked();
   void StopStatusSnapshotThreadLocked();
   void StatusSnapshotLoop();
+  
+  // ---- self action thread ----
+  void StartSelfActionThreadLocked();
+  void StopSelfActionThreadLocked();
+  void SelfActionLoop();
+  std::optional<my_data::Task> GetSelfTask(int timeout_ms);
+  void ExecuteSelfTask(const my_data::Task& task);
+  
   bool AppendTaskToTargetTaskQueue(const my_data::DeviceId& device_id, const Task& task);
 
 private:
@@ -107,6 +116,12 @@ private:
   int                 status_snapshot_interval_ms_{5000};
   std::atomic<bool>   snapshot_stop_{false};
   std::thread         snapshot_thread_;
+  
+  // ---- self action thread config/state ----
+  bool                self_action_enable_{true};  // 默认启用
+  std::string         self_device_id_{"self"};    // edge自己的device_id
+  std::atomic<bool>   self_action_stop_{false};
+  std::thread         do_self_action_thread_;
 };
 
 } // namespace my_edge::demo

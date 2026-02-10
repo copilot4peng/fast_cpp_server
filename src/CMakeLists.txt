@@ -39,6 +39,8 @@ set(BUILD_MY_MQTT_BROKER_MANAGER           ON CACHE BOOL "Build my_mqtt_broker_m
 set(BUILD_MY_EDGE_MANAGER   ON CACHE BOOL "Build my_edge_manager library")
 set(BUILD_MY_DEVICE         ON CACHE BOOL "Build my_device library")
 set(BUILD_MY_SCRIPT         ON CACHE BOOL "Build my_script library")
+set(BUILD_MY_TOOLS          ON CACHE BOOL "Build my_tools library")
+set(BUILD_MY_MATH           ON CACHE BOOL "Build my_math library")
 
 add_subdirectory(util/my_log)
 add_subdirectory(util/my_config)
@@ -62,6 +64,8 @@ add_subdirectory(util/my_network)
 add_subdirectory(util/my_mqtt)
 add_subdirectory(util/my_mqtt_broker_manager)
 add_subdirectory(util/my_api)
+add_subdirectory(util/my_math)
+add_subdirectory(util/my_tools)
 
 # 创建静态库 mylib
 add_library(mylib STATIC ${MYLIB_SOURCES})
@@ -112,6 +116,8 @@ target_link_libraries(mylib PUBLIC my_script)
 target_link_libraries(mylib PUBLIC my_cache)
 target_link_libraries(mylib PUBLIC my_comm)
 target_link_libraries(mylib PUBLIC my_network)
+target_link_libraries(mylib PUBLIC my_tools)
+target_link_libraries(mylib PUBLIC my_math)
 target_link_libraries(mylib PUBLIC my_ai_interface)
 target_link_libraries(mylib PUBLIC my_data)
 target_link_libraries(mylib PUBLIC my_api)
@@ -126,6 +132,8 @@ target_link_libraries(mylib PRIVATE my_soft_healthy)
 target_link_libraries(mylib PRIVATE my_system_healthy)
 target_link_libraries(mylib PRIVATE symengine)
 target_link_libraries(mylib PRIVATE sqlite3_static)
+target_link_libraries(mylib PRIVATE my_tools)
+target_link_libraries(mylib PRIVATE my_math)
 target_link_libraries(mylib PRIVATE
     ${PROJECT_SOURCE_DIR}/build/mavsdk_dist/lib/libmavsdk.a
     ${PROJECT_SOURCE_DIR}/build/mavsdk_dist/lib/libevents.a
