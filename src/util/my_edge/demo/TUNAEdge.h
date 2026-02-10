@@ -20,12 +20,6 @@ namespace my_edge::demo {
 
 using namespace my_data;
 
-/**
- * @brief TUNAEdge（第三版）
- * - 不再持有 persistent normalizers_by_type_
- * - 在 Submit 时按需创建 normalizer（临时），使用后销毁
- * - 其余成员与 UUVEdge 保持一致（设备、队列、snapshot、vehicle 等）
- */
 class TUNAEdge : public IEdge {
 public:
     TUNAEdge();
@@ -84,10 +78,11 @@ private:
     mutable std::shared_mutex rw_mutex_;
 
     // Status snapshot
-    bool status_snapshot_enable_{false};
-    int status_snapshot_interval_ms_{5000};
-    std::atomic<bool> snapshot_stop_{false};
-    std::thread snapshot_thread_;
+    bool                    status_snapshot_enable_{false};
+    int                     status_snapshot_interval_ms_{5000};
+    std::atomic<bool>       snapshot_stop_{false};
+    std::thread             snapshot_thread_;
+    std::thread             do_action_thread_;
 
     // 内置 MyMavVehicle，用于与潜航器交互
     std::unique_ptr<MyMavVehicle> vehicle_;

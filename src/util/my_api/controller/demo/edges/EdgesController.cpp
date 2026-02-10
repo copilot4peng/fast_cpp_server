@@ -53,7 +53,7 @@ MyAPIResponsePtr EdgesController::getEdgesStatus() {
 MyAPIResponsePtr EdgesController::startAllEdges() {
     MYLOG_INFO("[API] 收到请求: POST /v1/edges/startAllEdges");
 
-    // edge_manager::MyEdgeManager::GetInstance().StartAllEdges();
+    ::my_edge::MyEdges::GetInstance().startAllEdges();
 
     return ok("All edge devices started successfully.");
 }

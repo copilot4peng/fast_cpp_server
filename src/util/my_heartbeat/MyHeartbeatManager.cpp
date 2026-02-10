@@ -185,12 +185,12 @@ void HeartbeatManager::SendOnceByMQTT() {
     auto now = std::chrono::system_clock::now();
     auto ts = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 
-    payload["version"] = "1.0";
-    payload["source"] = source;
-    payload["type"] = "heartbeat";
-    payload["timestamp"] = ts;
-    payload["seq"] = ++seq_;
-    payload["status"] = "online";
+    payload["version"]      = "1.0";
+    payload["source"]       = source;
+    payload["type"]         = "heartbeat";
+    payload["timestamp"]    = ts;
+    payload["seq"]          = ++seq_;
+    payload["status"]       = "online";
 
     const std::string s = payload.dump();
     const std::string topic = formatTopic(topic_fmt, source);

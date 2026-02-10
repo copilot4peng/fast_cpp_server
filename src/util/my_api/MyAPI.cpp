@@ -141,6 +141,7 @@ void MyAPI::ServerThread(int port) {
         //     router->addController(objectMapper);
         //     docEndpoints.append(objectMapper->getEndpoints());
         // }
+        // router->addController(swaggerController);
 
         // --- 修正点：ConnectionHandler 只声明一次 ---
         auto connectionHandler = oatpp::web::server::HttpConnectionHandler::createShared(router);

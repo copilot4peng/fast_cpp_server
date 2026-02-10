@@ -456,6 +456,9 @@ void Pipeline::LaunchEdge(const nlohmann::json& args) {
     } catch (const std::exception& e) {
         MYLOG_ERROR("启动 Edge 模块时捕获异常: {}", e.what());
     }
+    MYLOG_INFO("Edge 模块设备创建流程完成，正在启动所有 Edge 设备...");
+    ::my_edge::MyEdges::GetInstance().startAllEdges();
+    MYLOG_INFO("所有 Edge 设备已启动");
 }
 
 void Pipeline::LaunchMyMqttBroker(const nlohmann::json& args) {

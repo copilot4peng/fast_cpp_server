@@ -28,7 +28,7 @@ public:
     ENDPOINT_INFO(getHeartbeatData) {
         info->summary = "获取心跳数据";
         info->description = "根据请求参数获取系统当前的心跳数据，包含系统状态、边缘设备状态等信息。";
-        info->addConsumes<oatpp::String>("application/json");
+        // info->addConsumes<oatpp::String>("application/json");
         info->addResponse<oatpp::String>(Status::CODE_200, "application/json");
         info->addResponse<oatpp::String>(Status::CODE_400, "application/json");
     }
