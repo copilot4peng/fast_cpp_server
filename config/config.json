@@ -74,7 +74,25 @@
                     "edge_number": 2,
                     "edge_create_args": [
                         {
+                            "edge_type": "TUNA",
+                            "edge_id": "tuna_001",
+                            "name": "tuna_001",
+                            "version": "0.1.0",
+                            "allow_queue_when_estop": false,
+                            "devices_count": 3,
+                            "devices": []
+                        },
+                        {
                             "edge_type": "UAV",
+                            "edge_id": "uav_001",
+                            "name": "uav_001",
+                            "version": "0.1.0",
+                            "allow_queue_when_estop": false,
+                            "devices_count": 3,
+                            "devices": []
+                        },
+                        {
+                            "edge_type": "UUV",
                             "edge_id": "uuv_001",
                             "name": "uuv_001",
                             "version": "0.1.0",
@@ -118,15 +136,6 @@
                                     }
                                 }
                             ]
-                        },
-                        {
-                            "edge_type": "TUNA",
-                            "edge_id": "tuna_001",
-                            "name": "tuna_001",
-                            "version": "0.1.0",
-                            "allow_queue_when_estop": false,
-                            "devices_count": 3,
-                            "devices": []
                         }
                     ]
                 },

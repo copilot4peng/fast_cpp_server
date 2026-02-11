@@ -4,6 +4,7 @@
 
 #include "JsonUtil.h"
 #include "MyDevice.h"
+#include "MyLog.h"
 
 namespace my_edge {
 
@@ -467,48 +468,141 @@ void BaseEdge::SelfActionLoop() {
   MYLOG_INFO("[Edge:{}] self_action loop 进入", edge_id_);
 
   while (!self_action_stop_.load()) {
-    // 这里假设 TaskQueue 暂时没有带超时的 Pop 接口：用简单轮询退化实现
-    // 如果你的 TaskQueue 支持阻塞 pop/timeout pop，建议在这里改成阻塞等待，CPU 更友好。
-    my_control::TaskQueue* q = nullptr;
-    {
-      std::shared_lock<std::shared_mutex> lk(rw_mutex_);
-      auto it = queues_.find(self_device_id_);
-      if (it != queues_.end() && it->second) q = it->second.get();
-    }
+    my_data::Task task;
+    // 尝试获取任务（会在内部仅持短锁以查找队列），timeout_ms 与之前 sleep 行为一致
+    int fetch_res = FetchSelfTask(task, 500); // 500ms 超时
 
-    if (!q) {
+    if (0 == fetch_res) { // No queue
       MYLOG_ERROR("[Edge:{}] self_action：self 队列不存在，线程退出", edge_id_);
       return;
     }
-
-    // 简单策略：如果队列为空就 sleep
-    if (q->Size() == 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
-      continue;
-    } else {
-        MYLOG_INFO("[Edge:{}] self_action：self 队列有任务，准备获取", edge_id_);
+    if (3 == fetch_res) { // Queue shutdown
+      MYLOG_INFO("[Edge:{}] self_action：self 队列已关闭，线程退出", edge_id_);
+      break;
     }
-
-    // 取任务：TaskQueue 当前只看到 Push/Size/Shutdown 等接口，这里无法安全 pop
-    // 因为我没读到 TaskQueue 的 pop 接口定义（可能在别处），所以这里留一个 TODO。
-    // 你把 TaskQueue 的 Pop/WaitPop 接口发我，我可以把这里改成真正的阻塞消费实现。
-    MYLOG_WARN("[Edge:{}] self_action：检测到队列非空，但当前缺少 Pop 接口实现，无法消费。请补齐 TaskQueue Pop 接口。",
-               edge_id_);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    if (5 == fetch_res) { // already has task
+      MYLOG_INFO("[Edge:{}] self_action：已有未执行任务，继续等待, fetch_res: {}", edge_id_, fetch_res);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // 退化行为，避免空转过快
+      continue;
+    }
+    if (2 == fetch_res) { // timeout, 无任务，继续循环
+      int wait_ms = 1000; // 退化行为，避免空转过快
+      MYLOG_INFO("[Edge:{}] self_action：无任务，继续等待 {} ms", edge_id_, wait_ms);
+      std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms)); // 退化行为，避免空转过快
+      continue;
+    }
+    if (1 == fetch_res) {
+      MYLOG_INFO("[Edge:{}] self_action：获取到任务，准备执行", edge_id_);
+      ExecuteSelfTask();
+    }
+    // 其它错误码（4）则回到循环重试
   }
 
   MYLOG_WARN("[Edge:{}] self_action loop 退出", edge_id_);
 }
 
-void BaseEdge::ExecuteSelfTaskLocked(const my_data::Task& task) {
-  MYLOG_INFO("[Edge:{}] 执行 self task：task_id={}, capability={}, action={}, params={}",
-             edge_id_, task.task_id, task.capability, task.action, task.params.dump());
+/**
+ * @brief 尝试从 self 队列中获取任务，带超时
+ * 
+ * @param out 输出参数，获取到的任务
+ * @param timeout_ms 超时时间，单位毫秒
+ * @return int 状态码：0=无队列，1=成功，2=超时，3=队列已关闭，4=错误，5=已有任务未执行
+ */
+int BaseEdge::FetchSelfTask(my_data::Task& out, int timeout_ms) {
+  my_control::TaskQueue* q = nullptr;
+  {
+    std::shared_lock<std::shared_mutex> lk(rw_mutex_);
+    auto it = queues_.find(self_device_id_);
+    if (it == queues_.end() || !it->second) {
+      return 0; // No queue
+    }
+    q = it->second.get();
+  }
 
+  if (q->IsShutdown()) return 3; // queue already shutdown
+
+  bool ok = false;
+  try {
+    // 判断当前任务状态，避免重复 fetch
+    RunState current_state = self_task_run_state_.load();
+    if (current_state == RunState::Ready) {
+      MYLOG_WARN("[Edge:{}] FetchSelfTask：当前已有未执行任务，跳过本次 fetch", edge_id_);
+      return 5; // already has task
+    }
+    if (current_state == RunState::Initializing) {
+      MYLOG_INFO("[Edge:{}] FetchSelfTask：当前任务正在初始化，开始本次 fetch", edge_id_);
+    }
+    if (current_state == RunState::Stopping || current_state == RunState::Stopped) {
+      MYLOG_WARN("[Edge:{}] FetchSelfTask：当前处于停止状态，开始本次 fetch", edge_id_);
+    }
+    if (current_state == RunState::RunOver) {
+      MYLOG_INFO("[Edge:{}] FetchSelfTask：当前处于运行结束状态, 开始本次 fetch", edge_id_);
+    }
+
+    ok = q->PopBlocking(out, timeout_ms);
+    this->self_task = out; // 存储到成员变量，供 ExecuteSelfTask 使用
+    this->self_task_run_state_.store(RunState::Initializing); // 标记为有新任务
+    MYLOG_INFO("[Edge:{}] 更新当前任务", edge_id_);
+  } catch (const std::exception& e) {
+    MYLOG_ERROR("[Edge:{}] FetchSelfTask 异常：{}", edge_id_, e.what());
+    return 4; // error
+  }
+
+  if (!ok) {
+    if (q->IsShutdown()) return 3; // shutdown triggered
+    return 2; // timeout (no task)
+  }
+  return 1; // ok
+}
+
+void BaseEdge::ExecuteSelfTask() {
+  std::unique_lock<std::shared_mutex> lk(rw_mutex_);
+  ExecuteSelfTaskLocked();
+}
+
+void BaseEdge::ExecuteSelfTaskLocked() {
+  MYLOG_INFO("[Edge:{}] 执行 self task：task_id={}, capability={}, action={}, params={}",
+             edge_id_, self_task.task_id, self_task.capability, self_task.action, self_task.params.dump(4));
+  if ("say_hello" == self_task.action) {
+    SayHelloAction(self_task);
+    return;
+  }
   // 你可以在这里实现一些内置动作示例：
   // - capability="edge", action="ping" => 立即上报一次心跳
   // - capability="edge", action="estop" => SetEStop(true,...)
   // - capability="edge", action="clear_estop" => SetEStop(false,...)
+  MYLOG_WARN("[Edge:{}] 未实现 self task 执行逻辑：capability={}, action={}", edge_id_, self_task.capability, self_task.action);
 }
+
+void BaseEdge::ExecuteOtherTask(const my_data::Task& task) {
+  std::unique_lock<std::shared_mutex> lk(rw_mutex_);
+  ExecuteOtherTaskLocked(task);
+}
+
+void BaseEdge::ExecuteOtherTaskLocked(const my_data::Task& task) {
+  MYLOG_INFO("[Edge:{}] 执行 self task：task_id={}, capability={}, action={}, params={}",
+             edge_id_, task.task_id, task.capability, task.action, task.params.dump(4));
+  if ("say_hello" == task.action) {
+    SayHelloAction(task);
+    return;
+  }
+  // 你可以在这里实现一些内置动作示例：
+  // - capability="edge", action="ping" => 立即上报一次心跳
+  // - capability="edge", action="estop" => SetEStop(true,...)
+  // - capability="edge", action="clear_estop" => SetEStop(false,...)
+  MYLOG_WARN("[Edge:{}] 未实现 self task 执行逻辑：capability={}, action={}", edge_id_, task.capability, task.action);
+}
+
+int BaseEdge::SayHelloAction(const my_data::Task& task) {
+  MYLOG_INFO("Hello from SayHelloAction! task_id={}", task.task_id);
+  this->self_task_run_state_.store(RunState::Running); // 标记为有新任务
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000)); // 模拟执行时间
+  MYLOG_INFO("SayHelloAction completed! task_id={}", task.task_id);
+  this->self_task_run_state_.store(RunState::Stopped); // 标记任务
+  this->self_task_run_state_.store(RunState::RunOver); // 标记任务
+  return 0; // success
+}
+
 
 void BaseEdge::StartSnapshotThreadLocked() {
   if (!snapshot_enable_) {

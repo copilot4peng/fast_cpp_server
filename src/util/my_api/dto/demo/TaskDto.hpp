@@ -27,9 +27,9 @@ class TaskDataDto : public oatpp::DTO {
     DTO_FIELD(String, capability);
     DTO_FIELD(String, action);
     // params/output/policy stored as JSON strings (nlohmann::json serialized)
-    DTO_FIELD(String, paramsJson);
-    DTO_FIELD(String, policyJson);
-    DTO_FIELD(String, resultJson);
+    DTO_FIELD(String, paramsJson) = "{}";
+    DTO_FIELD(String, policyJson) = "{}";
+    DTO_FIELD(String, resultJson) = "{}";
 
     // idempotency (reserved)
     DTO_FIELD(String, idempotencyKey);
@@ -91,7 +91,7 @@ class TaskDto : public oatpp::DTO {
   DTO_FIELD(String, edgeId);
   DTO_FIELD(String, taskType);
   // 可变参数以 JSON 字符串形式传递，业务层再解析为 nlohmann::json
-  DTO_FIELD(String, paramsJson);
+  DTO_FIELD(String, paramsJson) = "{}";
   DTO_FIELD(Object<TaskDataDto>, taskData);
 };
 

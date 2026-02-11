@@ -64,45 +64,26 @@ std::optional<my_data::Task> UAVEdge::NormalizeCommandLocked(const my_data::RawC
   return t;
 }
 
-void UAVEdge::ExecuteSelfTaskLocked(const my_data::Task& task) {
+void UAVEdge::ExecuteOtherTaskLocked(const my_data::Task& task) {
   // 先记录一条总日志，便于排查
   MYLOG_INFO("[Edge:{}] UAVEdge 执行 self task：task_id={}, capability={}, action={}, params={}",
              edge_id_, task.task_id, task.capability, task.action, task.params.dump());
 
-  // 示例：实现几个最常用的 edge 自身动作
-  // 说明：这里在 rw_mutex_ 的 unique_lock 保护下执行（由 BaseEdge 调用约定）
-  if (task.capability == "edge" && task.action == "estop") {
-    std::string reason = "外部命令触发";
-    if (task.params.is_object()) {
-      reason = task.params.value("reason", reason);
-    }
-    estop_.store(true);
-    {
-      std::lock_guard<std::mutex> lk(estop_mu_);
-      estop_reason_ = reason;
-    }
-    MYLOG_WARN("[Edge:{}] self_action：已触发 EStop，reason={}", edge_id_, reason);
-    return;
-  }
-
-  if (task.capability == "edge" && task.action == "clear_estop") {
-    estop_.store(false);
-    {
-      std::lock_guard<std::mutex> lk(estop_mu_);
-      estop_reason_.clear();
-    }
-    MYLOG_WARN("[Edge:{}] self_action：已解除 EStop", edge_id_);
-    return;
-  }
-
-  if (task.capability == "edge" && task.action == "heartbeat_now") {
-    MYLOG_INFO("[Edge:{}] self_action：触发一次立即心跳上报", edge_id_);
-    ReportHeartbeatLocked();
-    return;
-  }
+  // 示例：实现一些内置 self task
 
   // 未识别任务：交给 BaseEdge 默认实现（保持兼容）
-  my_edge::BaseEdge::ExecuteSelfTaskLocked(task);
+  my_edge::BaseEdge::ExecuteOtherTaskLocked(task);
+}
+
+void UAVEdge::ExecuteSelfTaskLocked() {
+  // 先记录一条总日志，便于排查
+  MYLOG_INFO("[Edge:{}] UAVEdge 执行 self task：task_id={}, capability={}, action={}, params={}",
+             edge_id_, self_task.task_id, self_task.capability, self_task.action, self_task.params.dump());
+
+  // 示例：实现一些内置 self task
+
+  // 未识别任务：交给 BaseEdge 默认实现（保持兼容）
+  my_edge::BaseEdge::ExecuteSelfTaskLocked();
 }
 
 } // namespace my_edge::demo

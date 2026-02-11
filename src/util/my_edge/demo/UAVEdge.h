@@ -48,7 +48,8 @@ protected:
    * - capability="edge", action="clear_estop"：解除紧急停止
    * - capability="edge", action="heartbeat_now"：触发一次立即心跳上报
    */
-  void ExecuteSelfTaskLocked(const my_data::Task& task) override;
+  void ExecuteSelfTaskLocked() override;
+  void ExecuteOtherTaskLocked(const my_data::Task& task) override;
 };
 
 } // namespace my_edge::demo
