@@ -60,7 +60,7 @@ void Workflow::RunLoop() {
 
     // 2) Pop：使用短超时以便响应 stop_（避免永久阻塞）
     my_data::Task task;
-    bool ok = queue_.PopBlocking(task, /*timeout_ms*/ 200);
+    bool ok = queue_.PopBlocking(task, /*timeout_ms*/ 1234);
     if (!ok) {
       // 可能是超时或 shutdown
       if (queue_.IsShutdown()) {

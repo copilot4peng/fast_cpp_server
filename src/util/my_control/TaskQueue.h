@@ -75,10 +75,10 @@ public:
 private:
   std::string name_;
 
-  mutable std::mutex mu_;
-  std::condition_variable cv_;
-  std::deque<my_data::Task> q_;
-  bool shutdown_{false};
+  mutable std::mutex mu_;         // 保护队列与状态
+  std::condition_variable cv_;    // 用于阻塞等待
+  std::deque<my_data::Task> q_;   // 任务队列
+  bool shutdown_{false};          // 是否已关闭
 };
 
 } // namespace my_control

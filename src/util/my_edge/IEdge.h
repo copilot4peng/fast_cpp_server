@@ -5,11 +5,20 @@
 #include <string>
 
 #include "MyData.h"
+#include "IDevice.h"
+#include "TaskQueue.h"
 #include "demo/Task.h"
 
 namespace my_edge {
 
 using namespace my_data;
+using namespace my_control;
+using namespace my_device;
+
+using DeviceID_Type___Mapping = std::unordered_map<my_data::DeviceId, std::string>;
+using DeviceID_Tasks__Mapping = std::unordered_map<my_data::DeviceId, std::unique_ptr<my_control::TaskQueue>>;
+using DeviceID_Device_Mapping = std::unordered_map<my_data::DeviceId, std::unique_ptr<my_device::IDevice>>;
+
 /**
  * @brief Submit 结果码：用于表达 Submit 的详细含义（替代 bool）
  */
@@ -77,18 +86,20 @@ inline std::string ToString(SubmitCode c) {
  * - Running: 已 Start，正常运行中
  * - Stopping: 收到停止信号，正在停止中（拒绝新命令，等待设备/队列清理完成）
  * - Stopped: 已完全停止，所有设备/队列已清理完成
+ * - RunOver: 运行结束（用于特殊场景，如单次运行后退出）
  */
-enum class RunState { Initializing, Ready, Running, Stopping, Stopped };
+enum class RunState { Initializing, Ready, Running, Stopping, Stopped, RunOver };
 
 
 static std::string RunStateToString(RunState s) {
     switch (s) {
-        case RunState::Initializing: return "Initializing";
-        case RunState::Ready: return "Ready";
-        case RunState::Running: return "Running";
-        case RunState::Stopping: return "Stopping";
-        case RunState::Stopped: return "Stopped";
-        default: return "UnknownRunState";
+        case RunState::Initializing:  return "Initializing";
+        case RunState::Ready:         return "Ready";
+        case RunState::Running:       return "Running";
+        case RunState::Stopping:      return "Stopping";
+        case RunState::Stopped:       return "Stopped";
+        case RunState::RunOver:       return "RunOver";
+        default:                      return "UnknownRunState";
     }
 }
 
