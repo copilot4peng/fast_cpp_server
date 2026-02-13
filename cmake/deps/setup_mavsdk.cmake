@@ -52,6 +52,8 @@ target_link_libraries(my_mavsdk INTERFACE
     jsoncpp
     tinyxml2
     curl
+    ldap
+    lber
     ssl
     crypto
     lzma
