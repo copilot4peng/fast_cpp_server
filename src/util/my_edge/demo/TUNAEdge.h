@@ -39,6 +39,7 @@ public:
     nlohmann::json DumpInternalInfo() const override;
     bool AppendJsonTask(const nlohmann::json& task) override;
     bool AppendTask(const my_data::Task& task) override;
+    nlohmann::json GetRunTimeStatusInfo() const override;
 
 private:
     // 辅助函数

@@ -379,6 +379,48 @@ nlohmann::json BaseEdge::DumpInternalInfo() const {
   return j;
 }
 
+nlohmann::json BaseEdge::GetRunTimeStatusInfo() const {
+  MYLOG_INFO("[Edge:{}] 开始获取运行时状态信息", edge_id_);
+  nlohmann::json allRunningInfo;
+  nlohmann::json tj = nlohmann::json::object();
+
+
+  // 线程状态
+  tj["self_task_monitor"] = {
+    {"enabled", self_task_monitor_enable_},
+    {"running", self_task_monitor_thread_.joinable()},
+    {"boot_at_ms", self_task_monitor_boot_at_ms_},
+    {"running_time_s", int((my_data::NowMs() - self_task_monitor_boot_at_ms_) / 1000)}
+  };
+  tj["self_action"] = {
+    {"enabled", self_action_enable_},
+    {"running", self_action_thread_.joinable()},
+    {"boot_at_ms", self_action_boot_at_ms_},
+    {"running_time_s", int((my_data::NowMs() - self_action_boot_at_ms_) / 1000)}
+  };
+  tj["snapshot"] = {
+    {"enabled", snapshot_enable_},
+    {"running", snapshot_thread_.joinable()},
+    {"boot_at_ms", snapshot_boot_at_ms_},
+    {"running_time_s", int((my_data::NowMs() - snapshot_boot_at_ms_) / 1000)}
+  };
+  allRunningInfo["thread_status"] = tj;
+
+  // 任务队列状态
+  nlohmann::json qj = nlohmann::json::object();
+  for (const auto& [device_id, q] : queues_) {
+    if (!q) continue;
+    qj[device_id] = {
+      {"name", q->Name()},
+      {"size", q->Size()},
+      {"is_shutdown", q->IsShutdown()}
+    };
+  }
+  allRunningInfo["queues"] = qj;
+  return allRunningInfo;
+}
+
+
 bool BaseEdge::AppendJsonTask(const nlohmann::json& taskj) {
   try {
     my_data::Task t = my_data::Task::fromJson(taskj);
@@ -458,6 +500,9 @@ void BaseEdge::StartSelfTaskMonitorThreadLocked() {
   }
   self_task_monitor_stop_.store(false);
   MYLOG_INFO("[Edge:{}] 启动 self_task monitor 线程", edge_id_);
+  self_task_monitor_boot_at_ms_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+  MYLOG_INFO("[Edge:{}] self_task monitor 线程启动时间戳：{}", edge_id_, self_task_monitor_boot_at_ms_);
   self_task_monitor_thread_ = std::thread(&BaseEdge::SelfTaskMonitorLoop, this);
 }
 
@@ -520,6 +565,9 @@ void BaseEdge::StartSelfActionThreadLocked() {
   }
   self_action_stop_.store(false);
   MYLOG_INFO("[Edge:{}] 启动 self_action 线程", edge_id_);
+  self_action_boot_at_ms_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+  MYLOG_INFO("[Edge:{}] self_action 线程启动时间戳：{}", edge_id_, self_action_boot_at_ms_);
   self_action_thread_ = std::thread(&BaseEdge::SelfActionLoop, this);
 }
 
@@ -706,7 +754,11 @@ void BaseEdge::StartSnapshotThreadLocked() {
   }
   snapshot_stop_.store(false);
   MYLOG_INFO("[Edge:{}] 启动 snapshot/心跳线程：interval_ms={}", edge_id_, snapshot_interval_ms_);
+  snapshot_boot_at_ms_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+  MYLOG_INFO("[Edge:{}] snapshot/心跳线程启动时间戳：{}", edge_id_, snapshot_boot_at_ms_);
   snapshot_thread_ = std::thread(&BaseEdge::SnapshotLoop, this);
+
 }
 
 void BaseEdge::StopSnapshotThreadLocked() {

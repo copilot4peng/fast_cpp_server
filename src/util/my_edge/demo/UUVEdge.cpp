@@ -188,6 +188,13 @@ bool UUVEdge::Init(const nlohmann::json& cfg, std::string* err) {
   return initStatus;
 }
 
+nlohmann::json UUVEdge::GetRunTimeStatusInfo() const {
+    nlohmann::json status;
+    status["name"] = "UUVEdge";
+    status["state"] = "active"; 
+    return status;
+}
+
 bool UUVEdge::Start(std::string* err) {
   std::unique_lock<std::shared_mutex> lk(rw_mutex_);
 

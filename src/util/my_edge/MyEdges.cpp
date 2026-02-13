@@ -363,4 +363,23 @@ bool MyEdges::getEdgeInternalDumpInfo(const std::string& edge_id, nlohmann::json
     return foundStatus;
 }
 
+bool MyEdges::getEdgeRunTimeStatusInfo(const std::string& edge_id, nlohmann::json& status_info) const {
+    bool foundStatus = false;
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = edges_.find(edge_id);
+        if (it == edges_.end()) {
+            MYLOG_WARN("ID 为 '" + edge_id + "' 的 Edge 未找到，无法获取运行时状态信息。");
+            foundStatus = false;
+        } else {
+            status_info = it->second->GetRunTimeStatusInfo();
+            foundStatus = true;
+        }
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("获取 Edge 运行时状态信息时发生异常: " + std::string(e.what()));
+        foundStatus = false;
+    }
+    return foundStatus;
+}
+
 }  // namespace my_edge

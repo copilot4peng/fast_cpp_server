@@ -52,6 +52,7 @@ public:
   std::string EdgeType() const override;                                    // 负责返回 edge_type
   void ShowAnalyzeInitArgs(const nlohmann::json& cfg) const override;       // 负责解析 Init 入参并记录到日志
   nlohmann::json DumpInternalInfo() const override;                         // 负责输出内部状态信息（受 rw_mutex_ 保护）
+  nlohmann::json GetRunTimeStatusInfo() const override;                     // 负责输出运行时状态信息（供 DumpInternalInfo 调用）
   bool AppendJsonTask(const nlohmann::json& task) override;                 // 负责把 JSON 任务转换成 Task 并调用 AppendTask
   bool AppendTask(const my_data::Task& task) override;                      // 负责把 Task 分发到对应队列（受 rw_mutex_ 保护）  
 
@@ -111,13 +112,16 @@ protected:
   bool                      self_task_monitor_enable_{true};                // 启动监控Task 默认启用
   std::atomic<bool>         self_task_monitor_stop_{false};                 // self_task_monitor 线程停止标志 
   std::thread               self_task_monitor_thread_;                      // self_task_monitor 线程 
+  std::int64_t              self_task_monitor_boot_at_ms_{0};               // self_task_monitor 启动时间戳  
   bool                      self_action_enable_{true};                      // 启动执行Task 默认启用
   std::atomic<bool>         self_action_stop_{false};                       // self action 线程停止标志 
   std::thread               self_action_thread_;                            // self action 线程 
+  std::int64_t              self_action_boot_at_ms_{0};                     // self action 启动时间戳
   bool                      snapshot_enable_{true};                         // 默认启用
   int                       snapshot_interval_ms_{2000};                    // 默认 2s 心跳
   std::atomic<bool>         snapshot_stop_{false};                          // snapshot 线程停止标志
   std::thread               snapshot_thread_;                               // snapshot 线程
+  std::int64_t              snapshot_boot_at_ms_{0};                        // snapshot 启动时间戳
 
 protected:
   // -------- 线程相关（锁内调用） --------

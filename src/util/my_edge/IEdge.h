@@ -162,6 +162,11 @@ public:
 
   // 获取类内元素,有几个队列，几个映射关系等，以及设备信息等（仅供调试/日志使用）
   virtual nlohmann::json DumpInternalInfo() const = 0;
+  /**
+     * @brief 获取运行时状态信息（供 DumpInternalInfo 调用）
+     * @return 包含运行时状态信息的 JSON 对象。
+     */
+  virtual nlohmann::json GetRunTimeStatusInfo() const = 0;
 
   /**
      * @brief 向 Edge 添加任务。

@@ -42,6 +42,7 @@ public:
   bool AppendTask(const my_data::Task& task) override;
   bool AppendJsonTask(const nlohmann::json& task) override;
   my_data::EdgeId Id() const override { return edge_id_; }
+  nlohmann::json GetRunTimeStatusInfo() const override;
 
   std::string EdgeType() const override { return edge_type_; }
 
