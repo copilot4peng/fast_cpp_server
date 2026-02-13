@@ -101,6 +101,22 @@ log_line info "SHARE_DIR:        ${SHARE_DIR}"
 log_line info "SERVICE_PATH:     ${SERVICE_PATH}"
 log_line info "========================================"
 
+
+
+log_line info "Searching for mosquitto binary..."
+MQTT_SRC=""
+if [ -f "./bin/${MQTT_PROGRAM_NAME}" ]; then
+  MQTT_SRC="./bin/${MQTT_PROGRAM_NAME}"
+  log_line info "Found mosquitto in ./bin/"
+elif [ -f "./sbin/${MQTT_PROGRAM_NAME}" ]; then
+  MQTT_SRC="./sbin/${MQTT_PROGRAM_NAME}"
+  log_line info "Found mosquitto in ./sbin/"
+else
+  if command -v ${MQTT_PROGRAM_NAME} >/dev/null 2>&1; then
+    MQTT_SRC="$(command -v ${MQTT_PROGRAM_NAME})"
+  fi
+fi 
+
 need_sudo_or_die
 
 log_line info "Stopping existing service if any..."
@@ -137,7 +153,7 @@ log_line info "Prepare bin dir: ${BIN_FOLDER_PATH}"
 run_cmd "${SUPER} mkdir -p ${BIN_FOLDER_PATH}"
 log_line info "Install bins and scripts"
 run_cmd "${SUPER} cp ./bin/${PROGRAM_NAME}      ${BIN_FOLDER_PATH}/${PROGRAM_NAME}"
-run_cmd "${SUPER} cp ./bin/${MQTT_PROGRAM_NAME} ${BIN_FOLDER_PATH}/${MQTT_PROGRAM_NAME}"
+run_cmd "${SUPER} cp ${MQTT_SRC} ${BIN_FOLDER_PATH}/${MQTT_PROGRAM_NAME}"
 run_cmd "${SUPER} chmod 755 ${BIN_FOLDER_PATH}/${PROGRAM_NAME}"
 run_cmd "${SUPER} chmod 755 ${BIN_FOLDER_PATH}/${MQTT_PROGRAM_NAME}"
 
