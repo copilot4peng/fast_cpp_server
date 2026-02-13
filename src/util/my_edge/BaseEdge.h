@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <functional>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
@@ -54,6 +55,11 @@ public:
   bool AppendJsonTask(const nlohmann::json& task) override;                 // 负责把 JSON 任务转换成 Task 并调用 AppendTask
   bool AppendTask(const my_data::Task& task) override;                      // 负责把 Task 分发到对应队列（受 rw_mutex_ 保护）  
 
+  // Self task 回调签名：task_id, capability, action, params（均为 string，按需修改）
+  using SelfTaskHandler = std::function<void(const my_data::Task& task)>;
+
+  // 注册回调（线程安全）：action -> handler
+  void RegisterSelfTaskHandler(const std::string& action, SelfTaskHandler handler);
 protected:
   // -------- 子类需要实现/可覆盖的钩子 --------
 
@@ -84,45 +90,86 @@ protected:
 protected:
   // -------- 受 rw_mutex_ 保护的成员 --------
   mutable std::shared_mutex rw_mutex_;
-  my_data::EdgeId           edge_id_{"edge-default"};
-  std::string               edge_type_{"base"};
-  std::string               version_{"0.0"};
-  nlohmann::json            cfg_;
-  std::int64_t              boot_at_ms_{0};
-  std::atomic<RunState>     run_state_{RunState::Initializing};
-  std::atomic<bool>         estop_{false};
-  mutable std::mutex        estop_mu_;
-  std::string               estop_reason_{};
-  bool                      allow_queue_when_estop_{false};
-  DeviceID_Type___Mapping   device_type_by_id_;
-  DeviceID_Tasks__Mapping   queues_;
-  DeviceID_Device_Mapping   devices_;
-  my_data::Task             self_task;                              // 用于 self action 线程的临时任务存储
-  std::atomic<RunState>     self_task_run_state_{RunState::Initializing};
-  bool                      self_action_enable_{true};                  // 默认启用
-  std::string               self_device_id_{"self"};                  // edge 自己的 device_id
-  std::atomic<bool>         self_action_stop_{false};
-  std::thread               self_action_thread_;
-  bool                      snapshot_enable_{true};                     // 默认启用
-  int                       snapshot_interval_ms_{2000};                // 默认 2s 心跳
-  std::atomic<bool>         snapshot_stop_{false};
-  std::thread               snapshot_thread_;
+  my_data::EdgeId           edge_id_{"edge-default"};                       // Edge ID（可由子类覆盖）
+  std::string               edge_type_{"base"};                             // Edge 类型（可由子类覆盖）
+  std::string               version_{"0.0"};                                // 版本信息（可由子类覆盖）
+  nlohmann::json            cfg_;                                           // 原始配置（Init 入参） 
+  std::int64_t              boot_at_ms_{0};                                 // 启动时间戳
+  std::atomic<RunState>     run_state_{RunState::Initializing};             // 运行状态
+  std::atomic<bool>         estop_{false};                                  // EStop 状态
+  mutable std::mutex        estop_mu_;                                      // 保护 estop_
+  std::string               estop_reason_{};                                // EStop 原因
+  bool                      allow_queue_when_estop_{false};                 // 默认不允许在 EStop 时入队
+  DeviceID_Type___Mapping   device_type_by_id_;                             // device_id -> device_type
+  DeviceID_Tasks__Mapping   queues_;                                        // device_id -> TaskQueue ptr
+  DeviceID_Device_Mapping   devices_;                                       // device_id -> IDevice ptr
+  std::string               self_device_id_{"self"};                        // edge 自己的 device_id
+  my_data::Task             self_task;                                      // 用于 self action 线程的临时任务存储
+  std::atomic<bool>         self_task_executing_{false};                    // self task 执行状态
+  mutable std::shared_mutex rw_mutex_self_task_;                            // 保护 self_task_
+  std::atomic<RunState>     self_task_run_state_{RunState::Initializing};   // self task 执行状态
+  bool                      self_task_monitor_enable_{true};                // 启动监控Task 默认启用
+  std::atomic<bool>         self_task_monitor_stop_{false};                 // self_task_monitor 线程停止标志 
+  std::thread               self_task_monitor_thread_;                      // self_task_monitor 线程 
+  bool                      self_action_enable_{true};                      // 启动执行Task 默认启用
+  std::atomic<bool>         self_action_stop_{false};                       // self action 线程停止标志 
+  std::thread               self_action_thread_;                            // self action 线程 
+  bool                      snapshot_enable_{true};                         // 默认启用
+  int                       snapshot_interval_ms_{2000};                    // 默认 2s 心跳
+  std::atomic<bool>         snapshot_stop_{false};                          // snapshot 线程停止标志
+  std::thread               snapshot_thread_;                               // snapshot 线程
 
 protected:
   // -------- 线程相关（锁内调用） --------
+
+  void StartSelfTaskMonitorThreadLocked();
+  void StopSelfTaskMonitorThreadLocked();
+  void SelfTaskMonitorLoop();
+
+  /**
+   * @brief 从 self 队列获取任务
+   * @param out 输出任务
+   * @param timeout_ms 超时时间（毫秒）
+   * @return 状态码：0 = 没有队列（NoQueue），1 = 获取成功（OK），2 = 超时（Timeout），3 = 队列已关闭（Shutdown），4 = 错误（Error）5=已有任务未执行
+   */
+  int FetchSelfTask(my_data::Task& out, int timeout_ms = 500);
+
   void StartSelfActionThreadLocked();
   void StopSelfActionThreadLocked();
   void SelfActionLoop();
 
-  // Self task fetch/execute helpers
-  // 返回值为状态码（int）：
-  // 0 = 没有队列（NoQueue），1 = 获取成功（OK），2 = 超时（Timeout），3 = 队列已关闭（Shutdown），4 = 错误（Error）
-  int FetchSelfTask(my_data::Task& out, int timeout_ms = 500);
+  /**
+   * @brief 执行其他任务
+   * @param task 要执行的任务
+   */
   void ExecuteOtherTask(const my_data::Task& task);
+
+  /**
+   * @brief 执行 self 任务
+   */
   void ExecuteSelfTask();
+
+  /**
+   * @brief 启动 snapshot 线程（锁内调用）
+   */
   void StartSnapshotThreadLocked();
+
+  /**
+   * @brief 停止 snapshot 线程（锁内调用）
+   */
   void StopSnapshotThreadLocked();
+
+  /**
+   * @brief snapshot 线程主循环
+   */
   void SnapshotLoop();
+
+  /**
+   * @brief 内置 self action 示例：打印 Hello
+   * 
+   * @param task 任务
+   * @return int 状态码
+   */
   int SayHelloAction(const my_data::Task& task);
 
   // -------- 通用工具函数 --------
@@ -134,6 +181,10 @@ protected:
                           std::int64_t queue_size_after = 0) const;
 
   bool AppendTaskToQueueLocked(const my_data::DeviceId& device_id, const my_data::Task& task, std::string* err);
+
+private:
+  std::unordered_map<std::string, SelfTaskHandler> self_task_handlers_;
+  std::mutex self_task_handlers_mutex_;
 };
 
 } // namespace my_edge
