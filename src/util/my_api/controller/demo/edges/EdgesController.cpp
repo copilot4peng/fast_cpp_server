@@ -177,4 +177,30 @@ MyAPIResponsePtr EdgesController::getTargetEdgeDumpInternalInfo(
     return jsonOk(dump_info, "dump info retrieved");
 
 }; // class EdgesController
+
+
+MyAPIResponsePtr EdgesController::getTargetEdgeRunTimeStatusInfo (
+    const oatpp::Object<my_api::dto::EdgeIDDto>& edgeIdDto
+) {
+    MYLOG_INFO("[API] 收到请求: POST /v1/edges/getTargetEdgeRunTimeStatusInfo");
+
+    if (!edgeIdDto || !edgeIdDto->edgeId) {
+        MYLOG_WARN("请求体 DTO 解析失败或 edgeId 缺失");
+        return jsonError(400, "edgeId required");
+    }
+
+    std::string edgeId = edgeIdDto->edgeId->c_str();
+    if (edgeId.size() > 256) {
+        return jsonError(400, "edgeId too long");
+    }
+
+    nlohmann::json status_info;
+    bool found = my_edge::MyEdges::GetInstance().getEdgeRunTimeStatusInfo(edgeId, status_info);
+    if (!found) {
+        MYLOG_WARN("Edge ID '{}' 未找到，无法获取运行时状态信息", edgeId);
+        return jsonError(404, "edge not found");
+    }
+
+    return jsonOk(status_info, "run time status info retrieved");
+}
 }; // namespace my_api::edge

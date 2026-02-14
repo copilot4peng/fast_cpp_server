@@ -210,6 +210,13 @@ bool TUNAEdge::Start(std::string* err) {
     return true;
 }
 
+nlohmann::json TUNAEdge::GetRunTimeStatusInfo() const {
+    nlohmann::json status;
+    status["name"] = "TUNAEdge";
+    status["state"] = "active"; 
+    return status;
+}
+
 SubmitResult TUNAEdge::Submit(const my_data::RawCommand& cmd) {
     std::shared_lock<std::shared_mutex> lk(rw_mutex_);
 

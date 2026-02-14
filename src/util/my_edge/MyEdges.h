@@ -181,6 +181,8 @@ public:
      */
     bool getEdgeInternalDumpInfo(const std::string& edge_id, nlohmann::json& dump_info) const;
 
+    bool getEdgeRunTimeStatusInfo(const std::string& edge_id, nlohmann::json& status_info) const;
+
     /**
      * @brief 向指定 ID 的 Edge 添加任务（使用 my_data::Task）。
      * @param edge_id Edge 的 ID。

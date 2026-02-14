@@ -16,6 +16,17 @@
             "c": 1
         }
     },
+    "pipeline_2": {
+        "execute_node_number": 1,
+        "executes": {
+            "0": {
+                "model_args": {
+                    "port": 9999
+                },
+                "model_name": "soft_healthy_monitor"
+            }
+        }
+    },
     "pipeline": {
         "execute_node_number": 4,
         "executes": {
@@ -23,6 +34,13 @@
                 "model_args": {
                     "enable": true,
                     "broker": {
+                        "port": 1883,
+                        "bin": "/home/peng/Code/fast_cpp_server/build/bin/mosquitto",
+                        "config": "/home/peng/Code/fast_cpp_server/config/mosquitto.conf",
+                        "log": "/home/peng/Code/fast_cpp_server/mosquitto.log",
+                        "foreground": true
+                    },
+                    "broker_docker": {
                         "port": 1883,
                         "bin": "/workspace/build/bin/mosquitto",
                         "config": "/workspace/config/mosquitto.conf",
@@ -34,6 +52,13 @@
                         "bin": "/home/cs/DockerRoot/fast_cpp_server/build/bin/mosquitto",
                         "config": "/home/cs/DockerRoot/fast_cpp_server/config/mosquitto.conf",
                         "log": "/home/cs/DockerRoot/fast_cpp_server/mosquitto.log",
+                        "foreground": true
+                    },
+                    "broker_home": {
+                        "port": 1883,
+                        "bin": "/home/peng/Code/fast_cpp_server/build/bin/mosquitto",
+                        "config": "/home/peng/Code/fast_cpp_server/config/mosquitto.conf",
+                        "log": "/home/peng/Code/fast_cpp_server/mosquitto.log",
                         "foreground": true
                     },
                     "broker_pro": {
@@ -146,6 +171,15 @@
                     "port": 9999
                 },
                 "model_name": "rest_api"
+            },
+            "5": {
+                "model_args": {
+                    "port": 9999,
+                    "target_name_": "./bin/fast_cpp_server",
+                    "target_pid_": "",
+                    "target_cmdline_regex": "sudo ./bin/fast_cpp_server -c /home/peng/Code/fast_cpp_server/config/config.ini"
+                },
+                "model_name": "soft_healthy_monitor"
             }
         }
     }

@@ -17,6 +17,10 @@ std::unique_ptr<IEdge> MyEdge::Create(const std::string& type) {
     return std::make_unique<my_edge::demo::UUVEdge>();
   }
 
+  if (type == "uav" || type == "UAV") {
+    return std::make_unique<my_edge::demo::UAVEdge>();
+  }
+  
   if (type == "tuna" || type == "TUNA") {
     return std::make_unique<my_edge::demo::TUNAEdge>();
   }

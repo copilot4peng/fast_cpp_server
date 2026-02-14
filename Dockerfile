@@ -21,8 +21,9 @@ RUN apt-get update && apt-get upgrade -y && \
     doxygen \
     graphviz \
     graphviz-dev \
-    python3.12 \
+    python3.14 \
     python3-pip \
+    libldap2-dev \
     libssl-dev \
     libcurl4-openssl-dev \
     clangd-14 \

@@ -69,6 +69,19 @@ public:
              BODY_DTO(oatpp::Object<my_api::dto::EdgeIDDto>, edgeIdDto)
             );
 
+    ENDPOINT_INFO(getTargetEdgeRunTimeStatusInfo) {
+        info->summary = "获取指定 Edge 的运行时状态信息";
+        info->description = "返回指定 Edge 的运行时状态信息，用于调试和诊断。";
+        info->addConsumes<oatpp::Object<my_api::dto::EdgeIDDto>>("application/json");
+        info->addResponse<oatpp::String>(Status::CODE_200, "application/json");
+        info->addResponse<oatpp::String>(Status::CODE_404, "application/json");
+    }
+    ENDPOINT("POST",
+             "/v1/edges/getTargetEdgeRunTimeStatusInfo",
+             getTargetEdgeRunTimeStatusInfo,
+             BODY_DTO(oatpp::Object<my_api::dto::EdgeIDDto>, edgeIdDto)
+            );
+
 }; // class EdgesController
 #include OATPP_CODEGEN_END(ApiController)
 

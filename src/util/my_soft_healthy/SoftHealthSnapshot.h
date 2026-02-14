@@ -1,75 +1,101 @@
-#ifndef HEALTH_SNAPSHOT_H
-#define HEALTH_SNAPSHOT_H
-
-#include <string>
-#include <vector>
-#include <map>
+#pragma once
+// Snapshot 类型定义（用于 Manager 发布、供外界读取）
+// 包含进程、线程和 Host 基线数据
 #include <chrono>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-/// 描述一个线程的快照信息
+namespace MySoftHealthy {
 struct ThreadSnapshot {
-    int tid;                        // 线程 ID
-    std::string name;              // 线程名称（从 /proc/<pid>/task/<tid>/comm 获取）
-    double cpu_usage_percent;      // CPU 使用率（百分比，基于上一轮采样差值计算）
-    size_t stack_kb;               // 栈空间占用（估算）
-    int parent_tid;                // 父线程 ID
-    long utime_ticks;              // 用户态 CPU 时间（单位：jiffies）
-    long stime_ticks;              // 内核态 CPU 时间（单位：jiffies）
+  int tid = 0;
+  std::string name;
+  char state = '?';
+  int priority = 0;
+  int nice = 0;
+  std::string policy = "UNKNOWN";
+
+  // 累积值（来自 /proc stat）
+  uint64_t utime_ticks = 0;
+  uint64_t stime_ticks = 0;
+
+  // 差分计算后填充
+  double cpu_pct_machine = 0.0;
+  double cpu_pct_core = 0.0;
+
+  // 可选字段
+  std::optional<uint64_t> rchar;
+  std::optional<uint64_t> wchar;
+  std::optional<uint64_t> read_bytes;
+  std::optional<uint64_t> write_bytes;
+
+  std::optional<uint64_t> voluntary_ctxt_switches;
+  std::optional<uint64_t> nonvoluntary_ctxt_switches;
 };
 
-/// 描述当前进程（主程序）的快照信息
-struct ProcessInfo {
-    int pid;                       // 当前进程 ID（/proc/self/status 中的 Pid）
-    int ppid;                      // 父进程 ID（/proc/self/status 中的 PPid）
-    std::string name;              // 程序名称（/proc/self/comm）
-    std::vector<int> children_pids;// 子进程列表（可选，从 /proc 遍历）
-    
-    // 内存使用情况（单位：KB）
-    size_t vm_size_kb;             // 虚拟地址空间大小（VmSize）
-    size_t vm_rss_kb;              // 常驻内存大小（VmRSS）
+struct ProcessSnapshot {
+  int pid = 0;
+  uint64_t start_time_ticks = 0; // 用于防止 PID 复用
+  int ppid = -1;
+  std::string name;
+  std::string cmdline;
+  char state = '?';
+  uint32_t threads_count = 0;
+
+  // 累积值
+  uint64_t utime_ticks = 0;
+  uint64_t stime_ticks = 0;
+
+  // 差分后
+  double cpu_pct_machine = 0.0;
+  double cpu_pct_core = 0.0;
+
+  // memory
+  uint64_t vm_rss_bytes = 0;
+  uint64_t vm_size_bytes = 0;
+
+  // io 累积
+  std::optional<uint64_t> io_rchar;
+  std::optional<uint64_t> io_wchar;
+  std::optional<uint64_t> io_read_bytes;
+  std::optional<uint64_t> io_write_bytes;
+
+  std::optional<uint64_t> voluntary_ctxt_switches;
+  std::optional<uint64_t> nonvoluntary_ctxt_switches;
+
+  // 衍生字段
+  std::vector<int> children;              // 直接子进程 pid 列表
+  std::vector<ThreadSnapshot> top_threads; // topN 线程快照
 };
 
-/// 用于构建线程的父子结构树
-struct ThreadTreeNode {
-    ThreadSnapshot thread;               // 当前线程快照
-    std::vector<ThreadTreeNode> children; // 子线程列表
+struct HostSnapshot {
+  int num_cpus = 1;
+  long clk_tck = 100;
+  uint64_t total_cpu_jiffies = 0;
 };
 
-/// 健康快照数据类
-class HealthSnapshot {
-public:
-    /// 设置程序启动时间（用于计算运行时长）
-    void setUptime(std::chrono::steady_clock::time_point start_time);
+struct SoftHealthSnapshot {
+  std::chrono::system_clock::time_point ts;
+  HostSnapshot host;
 
-    /// 设置线程快照信息
-    void setThreadSnapshots(const std::vector<ThreadSnapshot>& threads);
+  // target info（便于上层回显）
+  std::optional<int> target_pid;
+  std::optional<std::string> target_name;
+  std::optional<std::string> target_cmdline_regex;
 
-    /// 设置进程相关信息（包括内存）
-    void setProcessInfo(const ProcessInfo& proc_info);
+  std::vector<int> roots; // root pid 列表
 
-    /// 构建线程父子关系树结构（可用于图形展示）
-    void buildThreadTree();
+  // pid -> ProcessSnapshot
+  std::unordered_map<int, ProcessSnapshot> processes;
 
-    /// 获取当前程序已运行的时间（单位：秒）
-    double getUptimeSeconds() const;
-
-    /// 获取所有线程信息（线性）
-    const std::vector<ThreadSnapshot>& getThreads() const;
-
-    /// 获取线程树结构（主线程及其子线程）
-    const std::vector<ThreadTreeNode>& getThreadTree() const;
-
-    /// 获取当前进程信息（含内存/子进程）
-    const ProcessInfo& getProcessInfo() const;
-
-    /// 将当前快照转为 JSON 字符串（接口，稍后实现）
-    std::string toJsonString() const;
-
-private:
-    double uptime_seconds_ = 0.0;                         // 程序运行时长（秒）
-    std::vector<ThreadSnapshot> threads_;                 // 所有线程的平铺列表
-    ProcessInfo process_info_;                            // 进程信息（名称、PID、内存等）
-    std::vector<ThreadTreeNode> thread_tree_;             // 线程父子结构树
+  // 为了准确计算 delta，保留 pid->(tid->ticks) 的映射（在发布 snapshot 时填充）
+  std::unordered_map<int, std::unordered_map<int, uint64_t>> pid_tid_ticks;
 };
 
-#endif // HEALTH_SNAPSHOT_H
+
+void printSoftHealthSnapshotAsJsonZH(const MySoftHealthy::SoftHealthSnapshot& snap);
+void printSoftHealthSnapshotAsJson(const MySoftHealthy::SoftHealthSnapshot& snap);
+
+} // namespace MySoftHealthy

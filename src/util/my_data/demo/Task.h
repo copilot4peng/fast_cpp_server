@@ -62,6 +62,12 @@ struct Task {
   // - `created_at_ms`：任务创建时间（毫秒时间戳）
   // - `deadline_at_ms`：任务截止/超时时间（毫秒时间戳），超过则可取消或降级
   // - `policy`：调度/重试等策略的 JSON 描述，便于扩展
+  /**
+   * @brief 任务优先级，数值越大优先级越高
+   * 默认值为 0，表示普通优先级。
+   * 1: 高优先级任务，执行后即清空 self_task 成员变量，避免重复执行（一次性任务）。
+   * 0: 普通优先级任务，执行后保留 self_task 成员
+   */
   int priority{0};
   TimestampMs created_at_ms{0};
   TimestampMs deadline_at_ms{0};

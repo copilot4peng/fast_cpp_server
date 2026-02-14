@@ -99,7 +99,22 @@ run_cmd "mkdir -p ${USER_CONFIG_PATH} ${USER_LOG_PATH} ${USER_DATA_PATH} ${USER_
 
 log_line info "Install bins -> ${USER_BIN_FOLDER_PATH}/"
 run_cmd "cp ./bin/${PROGRAM_NAME}      ${USER_BIN_FOLDER_PATH}/${PROGRAM_NAME}"
-run_cmd "cp ./bin/${MQTT_PROGRAM_NAME} ${USER_BIN_FOLDER_PATH}/${MQTT_PROGRAM_NAME}"
+
+log_line info "Searching for mosquitto binary..."
+MQTT_SRC=""
+if [ -f "./bin/${MQTT_PROGRAM_NAME}" ]; then
+  MQTT_SRC="./bin/${MQTT_PROGRAM_NAME}"
+  log_line info "Found mosquitto in ./bin/"
+elif [ -f "./sbin/${MQTT_PROGRAM_NAME}" ]; then
+  MQTT_SRC="./sbin/${MQTT_PROGRAM_NAME}"
+  log_line info "Found mosquitto in ./sbin/"
+else
+  if command -v ${MQTT_PROGRAM_NAME} >/dev/null 2>&1; then
+    MQTT_SRC="$(command -v ${MQTT_PROGRAM_NAME})"
+  fi
+fi
+
+run_cmd "cp ${MQTT_SRC} ${USER_BIN_FOLDER_PATH}/${MQTT_PROGRAM_NAME}"
 run_cmd "chmod 755 ${USER_BIN_FOLDER_PATH}/${PROGRAM_NAME}"
 run_cmd "chmod 755 ${USER_BIN_FOLDER_PATH}/${MQTT_PROGRAM_NAME}"
 
