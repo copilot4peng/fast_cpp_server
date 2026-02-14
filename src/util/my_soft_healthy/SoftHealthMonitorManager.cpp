@@ -1,144 +1,133 @@
 #include "SoftHealthMonitorManager.h"
-#include "SoftHealthMonitorConfig.h"
-#include "SoftHealthSnapshot.h"
+#include <chrono>
+#include <iostream>
+#include <unistd.h>
+#include <memory>
+
 #include "MyLog.h"
 
-// 模拟采集器头文件（你应当替换为真实实现）
-#include <iostream>
-#include <thread>
-#include <chrono>
-#include <stdexcept>
+namespace MySoftHealthy {
 
-SoftHealthMonitorManager::SoftHealthMonitorManager()
-    : running_(false), initialized_(false), interval_seconds_(5) {}
+
+using namespace std::chrono;
+
+SoftHealthMonitorManager::SoftHealthMonitorManager() {
+  // 使用 std::atomic_store 对 shared_ptr 做原子写入，初始化为空
+  std::atomic_store(&current_snapshot_, std::shared_ptr<const SoftHealthSnapshot>());
+}
 
 SoftHealthMonitorManager::~SoftHealthMonitorManager() {
-    stop();
-}
-
-void SoftHealthMonitorManager::init(const SoftHealthMonitorConfig& config) {
-    std::string logInfo = "SoftHealthMonitorManager init with interval: " + std::to_string(config.getIntervalSeconds()) + " seconds";
-    MyLog::Info(logInfo); // 使用MyLog记录初始化信息
-
-    config_ = config;
-    interval_seconds_ = config.getIntervalSeconds();
-    start_time_ = std::chrono::steady_clock::now();
-    initialized_ = true;
-}
-
-void SoftHealthMonitorManager::setIntervalSeconds(int seconds) {
-    interval_seconds_ = seconds;
+  stop();
 }
 
 void SoftHealthMonitorManager::start() {
-    if (!initialized_) {
-        try {
-            throw std::runtime_error("SoftHealthMonitorManager must be initialized before start()");
-        } catch (const std::exception& ex) {
-            MyLog::Error(std::string("SoftHealthMonitorManager start failed: ") + ex.what());
-            return;
-        }
-    }
-
-    if (running_) return;
-
-    running_ = true;
-    monitor_thread_ = std::thread(&SoftHealthMonitorManager::monitorLoop, this);
+  std::lock_guard<std::mutex> lk(mtx_);
+  if (running_) return;
+  running_ = true;
+  worker_ = std::thread(&SoftHealthMonitorManager::loop, this);
+  MYLOG_INFO("SoftHealthMonitorManager 启动，interval={} 秒", cfg_.interval_seconds);
 }
 
 void SoftHealthMonitorManager::stop() {
+  {
+    std::lock_guard<std::mutex> lk(mtx_);
     if (!running_) return;
-
     running_ = false;
-    if (monitor_thread_.joinable()) {
-        monitor_thread_.join();
-    }
+    cv_.notify_all();
+  }
+  if (worker_.joinable()) worker_.join();
+  MYLOG_INFO("SoftHealthMonitorManager 已停止");
 }
 
-/// 后台线程主循环
-void SoftHealthMonitorManager::monitorLoop() {
-    while (running_) {
-        auto start = std::chrono::steady_clock::now();
+std::shared_ptr<const SoftHealthSnapshot> SoftHealthMonitorManager::refresh_now() {
+  // 同步采样一次（构建 curr），计算 delta，发布并返回
+  auto curr = std::make_shared<SoftHealthSnapshot>();
+  curr->ts = system_clock::now();
+  curr->host.num_cpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
+  curr->host.clk_tck = sysconf(_SC_CLK_TCK);
+  // host total jiffies
+  curr->host.total_cpu_jiffies = 0;
+  // 由 collector 填充 processes、roots 等
+  proc_col_.collect_processes_basic(*curr, cfg_);
 
-        try {
-            collectSnapshot();
-        } catch (const std::exception& ex) {
-            MyLog::Error(std::string("[HealthMonitor] Exception: ") + ex.what());
-        }
-
-        // 等待下一轮
-        auto elapsed = std::chrono::steady_clock::now() - start;
-        auto sleep_time = std::chrono::seconds(interval_seconds_) - elapsed;
-        if (sleep_time > std::chrono::seconds(0)) {
-            std::this_thread::sleep_for(sleep_time);
-        }
+  // 线程相关：为确保 prev 有 pid_tid_ticks，先填充 curr->pid_tid_ticks
+  for (auto &kv : curr->processes) {
+    int pid = kv.first;
+    // 将 tids 和 ticks 填入 pid_tid_ticks（两阶段：先读 ticks）
+    ThreadInfoCollector tcol;
+    auto tids = tcol.list_tids(pid);
+    for (int tid : tids) {
+      uint64_t ut=0, st=0; char stch='?'; int prio=0, nice=0, processor=-1;
+      std::string comm;
+      if (tcol.read_task_stat(pid, tid, ut, st, stch, prio, nice, processor, comm)) {
+        curr->pid_tid_ticks[pid][tid] = ut + st;
+      }
     }
+  }
+
+  // Now collect topN threads per process using prev map if available
+  for (auto &kv : curr->processes) {
+    int pid = kv.first;
+    const std::unordered_map<int,uint64_t>* prev_tid_map_ptr = nullptr;
+    if (prev_snapshot_) {
+      auto it_prev = prev_snapshot_->pid_tid_ticks.find(pid);
+      if (it_prev != prev_snapshot_->pid_tid_ticks.end()) prev_tid_map_ptr = &it_prev->second;
+    }
+    ThreadInfoCollector tcol;
+    auto top_threads = tcol.collect_topn_threads(pid, prev_tid_map_ptr, cfg_, prev_snapshot_ ? prev_snapshot_->host.total_cpu_jiffies : 0,
+                                                 curr->host.total_cpu_jiffies, curr->host.num_cpus);
+    kv.second.top_threads = std::move(top_threads);
+  }
+
+  // 分析 delta：cpu_pct 等
+  analyzer_.compute_deltas(prev_snapshot_, curr, cfg_.interval_seconds);
+
+  // 发布 snapshot（原子替换）
+  // 注意：current_snapshot_ 的类型是 std::shared_ptr<const SoftHealthSnapshot>
+  // 因此需要传入相同类型的 shared_ptr。`curr` 是 std::shared_ptr<SoftHealthSnapshot>,
+  // 这里转换为 const 版本后再原子存储。
+  std::atomic_store(&current_snapshot_, std::static_pointer_cast<const SoftHealthSnapshot>(curr));
+
+  // 更新 prev_snapshot_
+  prev_snapshot_ = curr;
+
+  MYLOG_INFO("完成一次同步采样，进程数={}，roots_count={}", curr->processes.size(), curr->roots.size());
+  return std::atomic_load(&current_snapshot_);
 }
 
-/// 单次快照采集逻辑（使用伪逻辑占位）
-void SoftHealthMonitorManager::collectSnapshot() {
-    HealthSnapshot snapshot;
+std::shared_ptr<const SoftHealthSnapshot> SoftHealthMonitorManager::getData() const {
+  return std::atomic_load(&current_snapshot_);
+}
 
-    // 设置运行时长
-    snapshot.setUptime(start_time_);
+void SoftHealthMonitorManager::applyConfig(const SoftHealthMonitorConfig& cfg) {
+  std::lock_guard<std::mutex> lk(mtx_);
+  cfg_ = cfg;
+  MYLOG_INFO("配置已更新：interval={} threads_topn={}", cfg_.interval_seconds, cfg_.threads_topn);
+  cv_.notify_all();
+}
 
-    // 以下数据采集应调用采集器模块，这里我们用模拟数据填充
-    ProcessInfo proc_info;
-    // proc_info.pid = getpid();
-    // proc_info.ppid = getppid();
-    proc_info.name = "demo_program";
-    proc_info.vm_rss_kb = 123456;
-    proc_info.vm_size_kb = 234567;
-    proc_info.children_pids = {};  // 可选：采集子进程
-
-    snapshot.setProcessInfo(proc_info);
-
-    // 模拟线程信息
-    std::vector<ThreadSnapshot> thread_list;
-    ThreadSnapshot main_thread;
-    main_thread.tid = proc_info.pid;
-    main_thread.name = "main";
-    main_thread.cpu_usage_percent = 1.5;
-    main_thread.stack_kb = 512;
-    main_thread.parent_tid = 0;
-    main_thread.utime_ticks = 100;
-    main_thread.stime_ticks = 50;
-
-    thread_list.push_back(main_thread);
-    snapshot.setThreadSnapshots(thread_list);
-
-    // 可选线程树构建
-    if (config_.isThreadTreeEnabled()) {
-        snapshot.buildThreadTree();
-    }
-
-    // 输出快照到控制台
-    if (config_.isConsoleOutputEnabled()) {
-        std::cout << "======== Health Snapshot ========" << std::endl;
-        std::cout << "Uptime: " << snapshot.getUptimeSeconds() << " seconds" << std::endl;
-        std::cout << "PID: " << proc_info.pid << ", PPID: " << proc_info.ppid << std::endl;
-        std::cout << "Memory: RSS = " << proc_info.vm_rss_kb << " KB, "
-                  << "VmSize = " << proc_info.vm_size_kb << " KB" << std::endl;
-        std::cout << "Threads: " << thread_list.size() << std::endl;
-        for (const auto& t : thread_list) {
-            std::cout << "  [TID " << t.tid << "] " << t.name
-                      << ", CPU: " << t.cpu_usage_percent << "%, Stack: " << t.stack_kb << "KB" << std::endl;
-        }
-        std::cout << "=================================" << std::endl;
-    }
-
-    // 在 collectSnapshot 中加入这一句：
+void SoftHealthMonitorManager::loop() {
+  auto next = steady_clock::now();
+  while (true) {
     {
-        std::lock_guard<std::mutex> lock(snapshot_mutex_);
-        last_snapshot_ = snapshot;
+      std::unique_lock<std::mutex> lk(mtx_);
+      if (!running_) break;
     }
 
-    // TODO: 你可以在这里添加日志记录、JSON 输出、远程推送等功能
+    // 采样并发布（同步）
+    try {
+      refresh_now();
+    } catch (const std::exception& e) {
+      MYLOG_ERROR("周期采样异常：{}", e.what());
+    }
 
+    // 等待到下一个周期或停止
+    next += seconds(cfg_.interval_seconds);
+    std::unique_lock<std::mutex> lk(mtx_);
+    if (!running_) break;
+    cv_.wait_until(lk, next, [this](){ return !running_; });
+    if (!running_) break;
+  }
 }
 
-
-HealthSnapshot SoftHealthMonitorManager::getLastSnapshot() {
-    std::lock_guard<std::mutex> lock(snapshot_mutex_);
-    return last_snapshot_;
-}
+} // namespace MySoftHealthy

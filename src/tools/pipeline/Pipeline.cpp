@@ -7,6 +7,8 @@
 #include "MyEdge.h"
 #include "MyMqttBrokerManager.h"
 #include "MqttService.hpp"
+#include "SoftHealthMonitorManager.h"
+#include "SoftHealthSnapshot.h"
 #include "MyAPI.h"
 #include "MyLog.h"
 #include "MyTools.h"
@@ -120,6 +122,7 @@ void Pipeline::LaunchRoBot() {
                 else if (model_name == "rest_api") { LaunchRestAPI(model_args); success_count++;}
                 else if (model_name == "edge") { LaunchEdge(model_args); success_count++;}
                 else if (model_name == "MQTTBroker") { LaunchMyMqttBroker(model_args); success_count++;}
+                else if (model_name == "soft_healthy_monitor") { LaunchSoftHealthyMonitor(model_args); success_count++;}
                 else { MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);}
                 
                 MYLOG_INFO("* Arg: {}, Value: {}", "节点分发完成", "节点[" + node_index + "] 已成功加入监听列表");
@@ -153,6 +156,19 @@ void Pipeline::LaunchRoBot() {
         MYLOG_INFO("* Arg: {}, Value: {}", "Pipeline核心崩溃", std::string("致命错误: ") + e.what());
     }
     MYLOG_INFO("RoBot launched successfully.");
+
+
+    // test std::shared_ptr<const SoftHealthSnapshot> getData() const;
+    auto& monitor = MySoftHealthy::SoftHealthMonitorManager::getInstance();
+    int count = 6;
+    while (count--)
+    {
+        std::shared_ptr<const MySoftHealthy::SoftHealthSnapshot> snapshot = monitor.getData();
+        MySoftHealthy::printSoftHealthSnapshotAsJsonZH(*snapshot);
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
+    
+    
 }
 
 
@@ -473,6 +489,26 @@ void Pipeline::LaunchMyMqttBroker(const nlohmann::json& args) {
         MYLOG_ERROR("启动 MQTT Broker 模块时捕获异常: {}", e.what());
     } 
     return;
+}
+
+
+void Pipeline::LaunchSoftHealthyMonitor(const nlohmann::json& args) {
+    MYLOG_INFO("启动 SoftHealthyMonitor 模块");
+    MYLOG_INFO("SoftHealthyMonitor 模块参数: {}", args.dump(4));
+    // 这里可以根据 args 创建和管理 SoftHealthyMonitor 实例
+    try {
+        MySoftHealthy::SoftHealthMonitorConfig config;
+        if (args.contains("target_name")) {
+            config.target_name = args.value("target_name", "");
+        }
+        // 根据 args 初始化 config
+        auto& monitor = MySoftHealthy::SoftHealthMonitorManager::getInstance();
+        monitor.init(config);
+        monitor.start();
+        MYLOG_INFO("成功启动 SoftHealthyMonitor 模块");
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("启动 SoftHealthyMonitor 模块时捕获异常: {}", e.what());
+    }
 }
 
 void Pipeline::Stop() {

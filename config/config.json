@@ -16,6 +16,17 @@
             "c": 1
         }
     },
+    "pipeline_2": {
+        "execute_node_number": 1,
+        "executes": {
+            "0": {
+                "model_args": {
+                    "port": 9999
+                },
+                "model_name": "soft_healthy_monitor"
+            }
+        }
+    },
     "pipeline": {
         "execute_node_number": 4,
         "executes": {
@@ -160,6 +171,15 @@
                     "port": 9999
                 },
                 "model_name": "rest_api"
+            },
+            "5": {
+                "model_args": {
+                    "port": 9999,
+                    "target_name_": "./bin/fast_cpp_server",
+                    "target_pid_": "",
+                    "target_cmdline_regex": "sudo ./bin/fast_cpp_server -c /home/peng/Code/fast_cpp_server/config/config.ini"
+                },
+                "model_name": "soft_healthy_monitor"
             }
         }
     }
