@@ -55,21 +55,21 @@ private:
   void loop();
 
 private:
-  SoftHealthMonitorConfig cfg_;
-  ProcessInfoCollector proc_col_;
-  ThreadInfoCollector thread_col_;
-  ResourceUsageAnalyzer analyzer_;
+  SoftHealthMonitorConfig     cfg_;
+  ProcessInfoCollector        proc_col_;
+  ThreadInfoCollector         thread_col_;
+  ResourceUsageAnalyzer       analyzer_;
 
   // 使用普通的 shared_ptr 存储当前 snapshot，并通过 std::atomic_store / std::atomic_load
   // 保证并发替换/读取的原子性（避免使用 std::atomic<std::shared_ptr<...>>，
   // 因为某些 libstdc++ 实现对非平凡类型不支持作为模板参数）。
   std::shared_ptr<const SoftHealthSnapshot> current_snapshot_;
-  std::shared_ptr<SoftHealthSnapshot> prev_snapshot_; // 用于 delta 计算（仅管理器内部）
+  std::shared_ptr<SoftHealthSnapshot>       prev_snapshot_; // 用于 delta 计算（仅管理器内部）
 
-  std::thread worker_;
-  mutable std::mutex mtx_;
-  std::condition_variable_any cv_;
-  bool running_ = false;
+  std::thread                     worker_;
+  mutable std::mutex              mtx_;
+  std::condition_variable_any     cv_;
+  bool                            running_ = false;
 };
 
 } // namespace MySoftHealthy

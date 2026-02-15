@@ -50,6 +50,7 @@ std::shared_ptr<const SoftHealthSnapshot> SoftHealthMonitorManager::refresh_now(
   // 由 collector 填充 processes、roots 等
   proc_col_.collect_processes_basic(*curr, cfg_);
 
+  MYLOG_INFO("采样完成，开始计算 delta 和衍生字段... 进程数={}，roots_count={}", curr->processes.size(), curr->roots.size());
   // 线程相关：为确保 prev 有 pid_tid_ticks，先填充 curr->pid_tid_ticks
   for (auto &kv : curr->processes) {
     int pid = kv.first;
@@ -65,17 +66,26 @@ std::shared_ptr<const SoftHealthSnapshot> SoftHealthMonitorManager::refresh_now(
     }
   }
 
+  MYLOG_INFO("pid_tid_ticks 填充完成，开始采集线程详细信息... 进程数={}，roots_count={}", curr->processes.size(), curr->roots.size());
   // Now collect topN threads per process using prev map if available
   for (auto &kv : curr->processes) {
     int pid = kv.first;
+    MYLOG_INFO("采集 pid={} 线程信息，线程数={}", pid, kv.second.threads_count);
     const std::unordered_map<int,uint64_t>* prev_tid_map_ptr = nullptr;
     if (prev_snapshot_) {
       auto it_prev = prev_snapshot_->pid_tid_ticks.find(pid);
-      if (it_prev != prev_snapshot_->pid_tid_ticks.end()) prev_tid_map_ptr = &it_prev->second;
+      if (it_prev != prev_snapshot_->pid_tid_ticks.end()) {
+        prev_tid_map_ptr = &it_prev->second;
+      }
     }
     ThreadInfoCollector tcol;
     auto top_threads = tcol.collect_topn_threads(pid, prev_tid_map_ptr, cfg_, prev_snapshot_ ? prev_snapshot_->host.total_cpu_jiffies : 0,
                                                  curr->host.total_cpu_jiffies, curr->host.num_cpus);
+    MYLOG_INFO("采集 pid={} 线程详细信息完成，top_threads_count={}", pid, top_threads.size());
+    // show thread info for debug
+    // for (const auto& th : top_threads) {
+    //   MYLOG_INFO("pid={} tid={} comm={} state={} cpu_pct_machine={:.2f} cpu_pct_core={:.2f}", pid, th.tid, th.name, th.state, th.cpu_pct_machine, th.cpu_pct_core);
+    // }
     kv.second.top_threads = std::move(top_threads);
   }
 
@@ -92,6 +102,15 @@ std::shared_ptr<const SoftHealthSnapshot> SoftHealthMonitorManager::refresh_now(
   prev_snapshot_ = curr;
 
   MYLOG_INFO("完成一次同步采样，进程数={}，roots_count={}", curr->processes.size(), curr->roots.size());
+  // // show summary info for debug
+  // for (const auto &kv : curr->processes) {
+  //   const auto &p = kv.second;
+  //   MYLOG_INFO("pid={} name={} cpu_pct_machine={:.2f} cpu_pct_core={:.2f} vm_rss_bytes={} threads_count={}", p.pid, p.name, p.cpu_pct_machine, p.cpu_pct_core, p.vm_rss_bytes, p.threads_count);
+  //   MYLOG_INFO("pid={} threads_count={} top_threads:", p.pid, p.threads_count);
+  //   for (const auto& th : p.top_threads) {
+  //     MYLOG_INFO("    tid={} comm={} state={} cpu_pct_machine={:.2f} cpu_pct_core={:.2f}", th.tid, th.name, th.state, th.cpu_pct_machine, th.cpu_pct_core);
+  //   }
+  // }
   return std::atomic_load(&current_snapshot_);
 }
 
@@ -116,6 +135,7 @@ void SoftHealthMonitorManager::loop() {
 
     // 采样并发布（同步）
     try {
+      std::cout << "SoftHealthMonitorManager: 触发周期采样..." << std::endl;
       refresh_now();
     } catch (const std::exception& e) {
       MYLOG_ERROR("周期采样异常：{}", e.what());

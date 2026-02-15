@@ -197,6 +197,8 @@ void ProcessInfoCollector::build_pid_maps(unordered_map<int,int>& pid_to_ppid,
 
 std::vector<int> ProcessInfoCollector::collect_subtree(const std::vector<int>& roots,
                                                   const std::unordered_map<int, std::vector<int>>& ppid_children) const {
+
+  MYLOG_INFO("开始构建子树，root_count={}，ppid_children_count={}", roots.size(), ppid_children.size());
   std::vector<int> res;
   std::unordered_set<int> vis;
   std::vector<int> stack = roots;
@@ -216,10 +218,15 @@ std::vector<int> ProcessInfoCollector::collect_subtree(const std::vector<int>& r
 
 void ProcessInfoCollector::collect_processes_basic(SoftHealthSnapshot& snap, const SoftHealthMonitorConfig& cfg) const {
   // 先构建 pid maps
-  std::unordered_map<int,int> pid_to_ppid;
+  std::unordered_map<int,int>               pid_to_ppid;
   std::unordered_map<int, std::vector<int>> ppid_children;
   build_pid_maps(pid_to_ppid, ppid_children);
+  MYLOG_INFO("ProcessInfoCollector: 构建 pid maps 完成，pid_count={}", pid_to_ppid.size());
 
+  MYLOG_INFO("ProcessInfoCollector: 解析目标进程，配置 target_pid={} target_name={} target_cmdline_regex={}",
+             (cfg.target_pid ? to_string(*cfg.target_pid) : "nullopt"),
+             (cfg.target_name ? *cfg.target_name : "nullopt"),
+             (cfg.target_cmdline_regex ? *cfg.target_cmdline_regex : "nullopt"));
   // resolve roots
   std::vector<int> roots;
   if (cfg.target_pid) roots.push_back(*cfg.target_pid);
@@ -229,7 +236,11 @@ void ProcessInfoCollector::collect_processes_basic(SoftHealthSnapshot& snap, con
       auto pids = list_all_pids();
       for (int pid : pids) {
         std::string comm = read_file_first_line("/proc/" + std::to_string(pid) + "/comm");
-        if (comm == *cfg.target_name) roots.push_back(pid);
+        // std::cout << "target_name: pid=" << pid << " comm=" << comm << std::endl;
+        if (comm == *cfg.target_name) {
+          roots.push_back(pid);
+          MYLOG_WARN("按 target_name 解析到 root 进程 pid={} comm={}", pid, comm);
+        }
       }
     } else if (cfg.target_cmdline_regex) {
       std::regex re;
@@ -240,9 +251,15 @@ void ProcessInfoCollector::collect_processes_basic(SoftHealthSnapshot& snap, con
       auto pids = list_all_pids();
       for (int pid : pids) {
         std::string cmd = read_file_all("/proc/" + std::to_string(pid) + "/cmdline");
-        if (cmd.empty()) continue;
+        if (cmd.empty()) {
+          continue;
+        }
+        // std::cout << "re: pid=" << pid << " cmd=" << cmd << std::endl;
         for (char &c : cmd) if (c == '\0') c = ' ';
-        if (std::regex_search(cmd, re)) roots.push_back(pid);
+        if (std::regex_search(cmd, re)) {
+          roots.push_back(pid);
+          MYLOG_WARN("按 target_cmdline_regex 解析到 root 进程 pid={} cmd={}", pid, cmd);
+        }
       }
     }
   }
@@ -270,12 +287,16 @@ void ProcessInfoCollector::collect_processes_basic(SoftHealthSnapshot& snap, con
   }
 
   // 填充 children（只保留 subtree 中的 child）
+  MYLOG_INFO("ProcessInfoCollector: 基本进程信息采集完成，subtree_size={}", subtree.size());
   for (auto &kv : snap.processes) {
     int pid = kv.first;
     auto it = ppid_children.find(pid);
     if (it == ppid_children.end()) continue;
     for (int ch : it->second) {
-      if (snap.processes.find(ch) != snap.processes.end()) kv.second.children.push_back(ch);
+      if (snap.processes.find(ch) != snap.processes.end()) {
+        kv.second.children.push_back(ch);
+      }
+      MYLOG_INFO("ProcessInfoCollector: pid={} child={}", pid, ch);
     }
     sort(kv.second.children.begin(), kv.second.children.end());
   }

@@ -123,6 +123,7 @@ vector<ThreadSnapshot> ThreadInfoCollector::collect_topn_threads(int pid,
     uint64_t curr_host_total,
     int host_num_cpus) const {
 
+  MYLOG_INFO("开始采集 pid={} 线程信息，线程数={}", pid, list_tids(pid).size());
   vector<int> tids = list_tids(pid);
   if (tids.empty()) return {};
 

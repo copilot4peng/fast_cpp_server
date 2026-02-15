@@ -3,6 +3,7 @@
 
 #include "controller/heartbeat_manager/HeartBeatController.h"
 #include "controller/script/ScriptController.h"
+#include "controller/soft_healthy/SoftHealthyController.h"
 
 #include "controller/demo/edges/EdgesController.hpp"
 #include "controller/demo/edge_manager/EdgeController.hpp"
@@ -119,6 +120,10 @@ void MyAPI::ServerThread(int port) {
         auto tunaController = my_api::tuna::TunaController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         router->addController(tunaController);
         docEndpoints.append(tunaController->getEndpoints());
+
+        auto softHealthyController = my_api::soft_healthy::SoftHealthyController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        router->addController(softHealthyController);
+        docEndpoints.append(softHealthyController->getEndpoints());
 
         auto swaggerController = oatpp::swagger::Controller::createShared(docEndpoints, docInfo, swaggerResources);
         router->addController(swaggerController);
