@@ -1,9 +1,13 @@
 #ifndef SOFT_HEALTH_MONITOR_CONFIG_H
 #define SOFT_HEALTH_MONITOR_CONFIG_H
 
+#include <iostream>
 #include <sstream>
 #include <optional>
 #include <string>
+#include <nlohmann/json.hpp>
+#include "MyLog.h"
+
 
 namespace MySoftHealthy {
 
@@ -22,14 +26,21 @@ struct SoftHealthMonitorConfig {
   bool include_ctx_switches = true;
 
   // 目标解析（互斥）：三选一
-  std::optional<int> target_pid;
-  std::optional<std::string> target_name;        // 匹配 /proc/<pid>/comm
-  std::optional<std::string> target_cmdline_regex; // regex 匹配 cmdline
+  std::optional<int>          target_pid;
+  std::optional<std::string>  target_name;          // 匹配 /proc/<pid>/comm
+  std::optional<std::string>  target_cmdline_regex; // regex 匹配 cmdline
 
   // 并发度 / 超时等（留作扩展/保护）
   int max_concurrent_probes = 4;
   int per_pid_timeout_ms = 2000;
 };
+
+
+
+void generateSampleConfigByJson(const nlohmann::json& j, SoftHealthMonitorConfig& cfg);
+
+void ShowSoftHealthMonitorConfigAsJson(const SoftHealthMonitorConfig& cfg);
+
 
 } // namespace MySoftHealthy
 

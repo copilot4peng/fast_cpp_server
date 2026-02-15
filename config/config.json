@@ -16,12 +16,14 @@
             "c": 1
         }
     },
-    "pipeline_2": {
+    "pipeline3": {
         "execute_node_number": 1,
         "executes": {
             "0": {
                 "model_args": {
-                    "port": 9999
+                    "target_name": "fast_cpp_server",
+                    "target_pid_": 0,
+                    "target_cmdline_regex_": "sudo ./bin/fast_cpp_server -c /home/peng/Code/fast_cpp_server/config/config.ini"
                 },
                 "model_name": "soft_healthy_monitor"
             }
@@ -69,7 +71,7 @@
                         "foreground": true
                     }
                 },
-                "model_name": "MQTTBroker",
+                "model_name": "MQTTBroker1",
                 "step_time_interval": 5
             },
             "1": {
@@ -173,11 +175,10 @@
                 "model_name": "rest_api"
             },
             "5": {
-                "model_args": {
-                    "port": 9999,
-                    "target_name_": "./bin/fast_cpp_server",
-                    "target_pid_": "",
-                    "target_cmdline_regex": "sudo ./bin/fast_cpp_server -c /home/peng/Code/fast_cpp_server/config/config.ini"
+                 "model_args": {
+                    "target_name": "fast_cpp_server",
+                    "target_pid_": 0,
+                    "target_cmdline_regex_": "sudo ./bin/fast_cpp_server -c /home/peng/Code/fast_cpp_server/config/config.ini"
                 },
                 "model_name": "soft_healthy_monitor"
             }

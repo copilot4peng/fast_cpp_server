@@ -9,6 +9,7 @@
 #include "MqttService.hpp"
 #include "SoftHealthMonitorManager.h"
 #include "SoftHealthSnapshot.h"
+#include "SoftHealthMonitorConfig.h"
 #include "MyAPI.h"
 #include "MyLog.h"
 #include "MyTools.h"
@@ -156,19 +157,6 @@ void Pipeline::LaunchRoBot() {
         MYLOG_INFO("* Arg: {}, Value: {}", "Pipeline核心崩溃", std::string("致命错误: ") + e.what());
     }
     MYLOG_INFO("RoBot launched successfully.");
-
-
-    // test std::shared_ptr<const SoftHealthSnapshot> getData() const;
-    auto& monitor = MySoftHealthy::SoftHealthMonitorManager::getInstance();
-    int count = 6;
-    while (count--)
-    {
-        std::shared_ptr<const MySoftHealthy::SoftHealthSnapshot> snapshot = monitor.getData();
-        MySoftHealthy::printSoftHealthSnapshotAsJsonZH(*snapshot);
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-    }
-    
-    
 }
 
 
@@ -495,12 +483,12 @@ void Pipeline::LaunchMyMqttBroker(const nlohmann::json& args) {
 void Pipeline::LaunchSoftHealthyMonitor(const nlohmann::json& args) {
     MYLOG_INFO("启动 SoftHealthyMonitor 模块");
     MYLOG_INFO("SoftHealthyMonitor 模块参数: {}", args.dump(4));
+    
     // 这里可以根据 args 创建和管理 SoftHealthyMonitor 实例
     try {
         MySoftHealthy::SoftHealthMonitorConfig config;
-        if (args.contains("target_name")) {
-            config.target_name = args.value("target_name", "");
-        }
+        MySoftHealthy::generateSampleConfigByJson(args, config);
+        MySoftHealthy::ShowSoftHealthMonitorConfigAsJson(config);
         // 根据 args 初始化 config
         auto& monitor = MySoftHealthy::SoftHealthMonitorManager::getInstance();
         monitor.init(config);
