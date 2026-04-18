@@ -52,7 +52,8 @@ private:
     void LaunchSoftHealthyMonitor(const nlohmann::json& args);
     void LaunchFlyControl(const nlohmann::json& args);
     void LaunchPodManager(const nlohmann::json& args);
-    void LaunchMediamtxMonitor(const nlohmann::json& args);
+    void LaunchMediamtxMonitorV1(const nlohmann::json& args);
+    void LaunchMediamtxMonitorV2(const nlohmann::json& args);
     void LaunchFileCache(const nlohmann::json& args);
     void LaunchAudioServer(const nlohmann::json& args);
     

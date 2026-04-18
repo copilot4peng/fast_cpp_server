@@ -40,7 +40,7 @@ namespace my_api {
 
 namespace {
 
-constexpr const char* kDefaultSwaggerResourceDir = "/home/cs/DockerRoot/fast_cpp_server/external/oatpp-swagger/res";
+constexpr const char* kDefaultSwaggerResourceDir = "/opt/fast_cpp_server/share/swagger-res/res";
 
 class OatppEnvironmentGuard {
 public:
