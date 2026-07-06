@@ -54,6 +54,7 @@ JsonComm::~JsonComm() {
 
 bool JsonComm::Init(const nlohmann::json& config) {
     std::lock_guard<std::mutex> lock(mutex_);
+    MYLOG_INFO("【JsonComm】开始初始化------------------------------------------------------------");
     if (initialized_) {
         MYLOG_WARN("【JsonComm】重复初始化被拒绝");
         return false;
@@ -66,10 +67,12 @@ bool JsonComm::Init(const nlohmann::json& config) {
 
     // 追加内置示例主题（可按需删除）。
     AppendDefaultTopics();
+    // SettingJsonCallbackForTopic();
 
     initialized_ = true;
     MYLOG_INFO("【JsonComm】初始化成功 enable={} topics_count={} default_qos={}",
                enable_, topics_.size(), default_qos_);
+    MYLOG_INFO("【JsonComm】初始化结束------------------------------------------------------------");
     return true;
 }
 
@@ -134,6 +137,25 @@ void JsonComm::Stop() {
 bool JsonComm::IsRunning() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return running_;
+}
+
+bool JsonComm::SettingJsonCallbackForTopic() {
+    MYLOG_INFO("【JsonComm】开始为 topic 注册 json 回调，topic_count={}", topics_.size());
+	if (topics_.empty()) {
+		MYLOG_WARN("【JsonComm】当前没有可注册的 topic");
+		return false;
+	}
+
+	for (std::size_t index = 0; index < topics_.size(); ++index) {
+		const std::string& topic = topics_[index];
+		MYLOG_INFO("【JsonComm】初始化阶段正在注册第 {}/{} 个 topic：{}", index + 1, topics_.size(), topic);
+		RegisterCallbackToFastMQTT(topic,
+							   JsonCallBackFuncs::GetInstance().GetCallbackForTopic(topic),
+							   default_qos_);
+	}
+
+	MYLOG_INFO("【JsonComm】为主题注册 json 回调完成，已处理 {} 个 topic", topics_.size());
+	return true;
 }
 
 std::uint64_t JsonComm::RegisterCallbackToFastMQTT(const std::string& topic,

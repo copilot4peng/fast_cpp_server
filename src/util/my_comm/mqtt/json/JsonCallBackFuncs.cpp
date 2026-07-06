@@ -59,10 +59,10 @@ fast_mqtt::MessageCallback JsonCallBackFuncs::BuildCallback(const std::string& t
 
         // 3. 按 topic 走对应的处理分支（此处为示例，实际业务可自行扩展）。
         MYLOG_INFO("【JSON】处理消息 topic={}", msg.topic);
-        if (!topic.empty() && topic == "yingji/situation_ui") {
-            MYLOG_INFO("【JSON】执行 yingji/situation_ui 专属处理逻辑");
-        } else if (!topic.empty() && topic == "test") {
+        if (!topic.empty() && topic == "test") {
             MYLOG_INFO("【JSON】执行 test 专属处理逻辑");
+        } else if (!topic.empty() && topic == "/json/default") {
+            MYLOG_INFO("【JSON】执行 /json/default 专属处理逻辑");
         } else {
             MYLOG_INFO("【JSON】执行通用处理逻辑");
         }

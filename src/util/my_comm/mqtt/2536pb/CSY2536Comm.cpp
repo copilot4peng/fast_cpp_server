@@ -23,6 +23,7 @@ CSY2536Comm::~CSY2536Comm() = default;
 
 bool CSY2536Comm::Initialize(const nlohmann::json& config) {
 	std::lock_guard<std::mutex> lock(mutex_);
+    MYLOG_INFO("【CSY2536Comm】开始初始化------------------------------------------------------------");
 	if (initialized_) {
 		MYLOG_WARN("【CSY2536Comm】重复初始化被拒绝");
 		return false;
@@ -38,6 +39,7 @@ bool CSY2536Comm::Initialize(const nlohmann::json& config) {
 	initialized_ = true;
 	MYLOG_INFO("【CSY2536Comm】初始化成功 enable={} topics_count={} default_qos={}",
 			   enable_, topics_.size(), default_qos_);
+    MYLOG_INFO("【CSY2536Comm】初始化结束------------------------------------------------------------");
 	return true;
 }
 

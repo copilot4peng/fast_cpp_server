@@ -129,8 +129,18 @@ public:
      * @param qos QoS 等级。
      * @return std::uint64_t 回调句柄。
      */
-    std::uint64_t RegisterCallbackToFastMQTT(const std::string& topic, fast_mqtt::MessageCallback callback, int qos=1);
+    std::uint64_t RegisterCallbackToFastMQTT(const std::string& topic,
+                                             fast_mqtt::MessageCallback callback,
+                                             int qos=1);
 
+    /**
+	 * @brief 为指定主题设置 json 回调。
+	 *
+	 * @return true 设置成功。
+	 * @return false 设置失败。
+	 */
+	bool SettingJsonCallbackForTopic();
+    
     /**
      * @brief 清空某个 topic 的全部回调（包括底层订阅）。
      */
