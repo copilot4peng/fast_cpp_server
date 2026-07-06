@@ -5,6 +5,9 @@
 #include "MyEdge.h"
 #include "MyMqttBrokerManager.h"
 #include "MqttService.hpp"
+#include "FastMQTT.hpp"
+#include "CSY2536Comm.h"
+#include "MyComm.h"
 #include "SoftHealthMonitorManager.h"
 #include "SoftHealthMonitorConfig.h"
 #include "MyAPI.h"
@@ -39,6 +42,10 @@ namespace pipeline {
 using namespace my_tools;
 using namespace my_edge;
 using namespace my_heartbeat;
+using namespace fast_mqtt;
+using namespace csy2536;
+using namespace my_comm;
+
 
 Pipeline::~Pipeline() {
     Stop();
@@ -130,6 +137,7 @@ void Pipeline::LaunchRoBot() {
                 // --- 业务逻辑分发 ---
                 if (model_name == "heartbeat") { LaunchHeartbeat(model_args); success_count++;}
                 else if (model_name == "mqtt_comm") { LaunchMQTTComm(model_args); success_count++;}
+                else if (model_name == "fast_mqtt") { LaunchFastMQTT(model_args); success_count++;}
                 else if (model_name == "comm") { LaunchComm(model_args); success_count++;}
                 else if (model_name == "system_healthy") { LaunchSystemHealthy(model_args); success_count++;}
                 else if (model_name == "edge_monitor") { LaunchEdgeMonitor(model_args); success_count++;}
@@ -143,6 +151,7 @@ void Pipeline::LaunchRoBot() {
                 else if (model_name == "file_cache") { LaunchFileCache(model_args); success_count++;}
                 else if (model_name == "audio_server") { LaunchAudioServer(model_args); success_count++;}
                 else if (model_name == "search_light") { LaunchSearchLight(model_args); success_count++;}
+                else if (model_name == "2536_comm") { Launch2536Comm(model_args); success_count++;}
                 else { MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);}
                 
                 MYLOG_INFO("* Arg: {}, Value: {}", "节点分发完成", "节点[" + node_index + "] 已成功加入监听列表");
@@ -348,6 +357,79 @@ void Pipeline::LaunchRestAPI(const nlohmann::json& args) {
         MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
     }
 }
+
+void Pipeline::LaunchFastMQTT(const nlohmann::json& args) {
+    const std::string module_name = "FastMQTT模块";
+    MYLOG_INFO("===== 开始启动模块: {} =====", module_name);
+
+    nlohmann::json cfg = {
+        {"mqtt", {
+            {"enable", true},
+            {"broker", {
+                {"host", "127.0.0.1"},
+                {"port", 1883},
+                {"client_id", "launcher_001"},
+                {"keep_alive", 60},
+                {"auto_reconnect", true}
+            }},
+            {"thread", {{"send_queue_size", 1000}, {"recv_queue_size", 1000}}},
+            {"default", {{"qos", 1}, {"retain", false}}}
+        }}
+    };
+
+    try {
+        // 1. 初始化 FastMQTT
+        fast_mqtt::FastMQTT& fast_mqtt = fast_mqtt::FastMQTT::GetInstance();
+        if (!fast_mqtt.Initialize(cfg)) {
+            MYLOG_ERROR("* 模块: {}, 初始化失败，跳过启动", module_name);
+            return;
+        } else {
+            MYLOG_INFO("* 模块: {}, 初始化成功", module_name);
+        }
+
+        // 2. 启动 FastMQTT 的接收线程
+        fast_mqtt.Start();
+
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
+    } catch (...) {
+        MYLOG_ERROR("* 模块: {}, 捕获未知严重异常", module_name);
+    }
+}
+
+void Pipeline::Launch2536Comm(const nlohmann::json& args) {
+    const std::string module_name = "2398Comm模块";
+    MYLOG_INFO("===== 开始启动模块: {} =====", module_name);
+
+    try {
+        // // 初始化 2398Comm 模块
+        // csy2536::CSY2536Comm& comm = csy2536::CSY2536Comm::GetInstance();
+        // if (!comm.Initialize(args)) {
+        //     MYLOG_ERROR("* 模块: {}, 初始化失败，跳过启动", module_name);
+        //     return;
+        // } else {
+        //     MYLOG_INFO("* 模块: {}, 初始化成功", module_name);
+        //     comm.Start(); // 启动 2398Comm 的线程
+        // } 
+
+        my_comm::MyComm& comm = my_comm::MyComm::GetInstance();
+        if (!comm.Init(args)) {
+            MYLOG_ERROR("* 模块: {}, 初始化失败，跳过启动", module_name);
+            return;
+        } else {
+            MYLOG_INFO("* 模块: {}, 初始化成功", module_name);
+            comm.Start();
+        }
+
+        MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功");
+
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
+    } catch (...) {
+        MYLOG_ERROR("* 模块: {}, 捕获未知严重异常", module_name);
+    }
+}
+
 
 void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
     int interval = args.value("interval_sec_", 3);
