@@ -49,6 +49,8 @@ private:
     void LaunchEdge(const nlohmann::json& args);
     void LaunchMyMqttBroker(const nlohmann::json& args);
     void LaunchMQTTComm(const nlohmann::json& args);
+    void LaunchFastMQTT(const nlohmann::json& args);
+    void Launch2536Comm(const nlohmann::json& args);
     void LaunchSoftHealthyMonitor(const nlohmann::json& args);
     void LaunchFlyControl(const nlohmann::json& args);
     void LaunchPodManager(const nlohmann::json& args);
