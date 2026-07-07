@@ -33,25 +33,38 @@ std::shared_ptr<ContextController> ContextController::createShared(
 namespace {
 
 /**
- * @brief 安全解析请求体为 JSON 对象
+ * @brief 将 oatpp::Any 转成 nlohmann::json
  * @return 解析成功返回 true，并写入 out；失败写入 error
  */
-bool ParseBodyObject(const oatpp::String& body, nlohmann::json& out, std::string& error) {
-    if (!body || body->empty()) {
-        error = "请求体为空";
+bool ConvertAnyToJson(const oatpp::Any& value,
+                      const std::shared_ptr<oatpp::data::mapping::ObjectMapper>& objectMapper,
+                      nlohmann::json& out,
+                      std::string& error) {
+    if (!objectMapper) {
+        error = "对象映射器不可用";
         return false;
     }
-    nlohmann::json parsed = nlohmann::json::parse(body->c_str(), nullptr, false);
-    if (parsed.is_discarded()) {
-        error = "请求体不是合法的 JSON";
+
+    try {
+        const oatpp::Void valueVoid(value);
+        const oatpp::String jsonText = objectMapper->writeToString(valueVoid);
+        if (!jsonText) {
+            error = "value 序列化失败";
+            return false;
+        }
+
+        nlohmann::json parsed = nlohmann::json::parse(jsonText->c_str(), nullptr, false);
+        if (parsed.is_discarded()) {
+            error = "value 不是合法的 JSON";
+            return false;
+        }
+
+        out = std::move(parsed);
+        return true;
+    } catch (const std::exception& e) {
+        error = std::string("解析 value 失败: ") + e.what();
         return false;
     }
-    if (!parsed.is_object()) {
-        error = "请求体必须为 JSON 对象";
-        return false;
-    }
-    out = std::move(parsed);
-    return true;
 }
 
 }  // namespace
@@ -108,27 +121,28 @@ MyAPIResponsePtr ContextController::getContext(
 // 设置（upsert）上下文
 // ============================================================================
 
-MyAPIResponsePtr ContextController::setContext(const oatpp::String& body) {
+MyAPIResponsePtr ContextController::setContext(
+    const oatpp::Object<my_api::dto::ContextWriteRequestDto>& requestDto) {
     try {
-        nlohmann::json j;
-        std::string parse_err;
-        if (!ParseBodyObject(body, j, parse_err)) {
-            return jsonError(400, parse_err);
-        }
-        if (!j.contains("name") || !j["name"].is_string() || j["name"].get<std::string>().empty()) {
+        if (!requestDto || !requestDto->name || requestDto->name->empty()) {
             return jsonError(400, "缺少有效的 name 字段");
         }
-        if (!j.contains("value")) {
-            return jsonError(400, "缺少 value 字段");
+
+        const std::string name = requestDto->name->c_str();
+        nlohmann::json valueJson;
+        std::string valueErr;
+        if (!ConvertAnyToJson(requestDto->value, getDefaultObjectMapper(), valueJson, valueErr)) {
+            return jsonError(400, valueErr);
         }
-        const std::string name = j["name"].get<std::string>();
+
         std::string description;
-        if (j.contains("description") && j["description"].is_string()) {
-            description = j["description"].get<std::string>();
+        if (requestDto->description && !requestDto->description->empty()) {
+            description = requestDto->description->c_str();
         }
+
         MYLOG_INFO("[API-Context] POST /v1/context/set name={}", name);
 
-        if (!my_comm::MyContext::GetInstance().Set(name, j["value"], description)) {
+        if (!my_comm::MyContext::GetInstance().Set(name, valueJson, description)) {
             return jsonError(500, "设置上下文失败");
         }
         nlohmann::json entry;
@@ -144,30 +158,30 @@ MyAPIResponsePtr ContextController::setContext(const oatpp::String& body) {
 // 修改某个已存在的上下文
 // ============================================================================
 
-MyAPIResponsePtr ContextController::updateContext(const oatpp::String& body) {
+MyAPIResponsePtr ContextController::updateContext(
+    const oatpp::Object<my_api::dto::ContextWriteRequestDto>& requestDto) {
     try {
-        nlohmann::json j;
-        std::string parse_err;
-        if (!ParseBodyObject(body, j, parse_err)) {
-            return jsonError(400, parse_err);
-        }
-        if (!j.contains("name") || !j["name"].is_string() || j["name"].get<std::string>().empty()) {
+        if (!requestDto || !requestDto->name || requestDto->name->empty()) {
             return jsonError(400, "缺少有效的 name 字段");
         }
-        if (!j.contains("value")) {
-            return jsonError(400, "缺少 value 字段");
+
+        const std::string name = requestDto->name->c_str();
+        nlohmann::json valueJson;
+        std::string valueErr;
+        if (!ConvertAnyToJson(requestDto->value, getDefaultObjectMapper(), valueJson, valueErr)) {
+            return jsonError(400, valueErr);
         }
-        const std::string name = j["name"].get<std::string>();
+
         MYLOG_INFO("[API-Context] POST /v1/context/update name={}", name);
 
         std::string err;
-        if (!my_comm::MyContext::GetInstance().UpdateValue(name, j["value"], err)) {
+        if (!my_comm::MyContext::GetInstance().UpdateValue(name, valueJson, err)) {
             return jsonError(404, err);
         }
-        if (j.contains("description") && j["description"].is_string()) {
+        if (requestDto->description && !requestDto->description->empty()) {
             std::string desc_err;
             my_comm::MyContext::GetInstance().UpdateDescription(
-                name, j["description"].get<std::string>(), desc_err);
+                name, requestDto->description->c_str(), desc_err);
         }
         nlohmann::json entry;
         my_comm::MyContext::GetInstance().GetEntryJson(name, entry);

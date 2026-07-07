@@ -9,6 +9,8 @@
 #include "controller/mediamtx_monitor/MediamtxMonitorController.h"
 #include "controller/file_cache/FileApiController.h"
 
+#include "controller/fast_mqtt/FastMQTTController.h"
+
 #include "controller/audio/AudioController.h"
 #include "controller/light/LightController.h"
 #include "controller/ip/MyIPController.h"
@@ -344,6 +346,10 @@ bool MyAPI::LoadAPIModel(
     } else if ("context" == model_name) {
         MYLOG_INFO("MyAPI: 加载运行时上下文 API 模型");
         controller = my_api::context_api::ContextController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        has_model = true;
+    } else if ("fast_mqtt" == model_name) {
+        MYLOG_INFO("MyAPI: 加载 FastMQTT API 模型");
+        controller = my_api::fast_mqtt_api::FastMQTTController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else {
         MYLOG_WARN("MyAPI: 未知的 API 模型名称: {}", model_name);

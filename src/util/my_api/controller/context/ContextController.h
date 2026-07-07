@@ -71,13 +71,15 @@ public:
         info->addTag(SWAGGER_TAG);
         info->summary     = "设置上下文（不存在则创建，存在则覆盖）";
         info->description =
-            "设置一条上下文记录。value 可为 bool / 数值 / 字符串 / 对象 / 数组。"
-            "请求体示例：{ \"name\": \"is_recording\", \"value\": true, \"description\": \"是否正在录制\" }。"
+            "设置一条上下文记录。value 可为 bool / 数值 / 字符串 / 对象 / 数组。\n"
+            "请求体示例：{\"name\":\"is_recording\", \"value\": true, \"description\": \"是否正在录制\" }。\n"
             "description 可选；省略时若记录已存在则保留原解释。";
+        info->addConsumes<oatpp::Object<my_api::dto::ContextWriteRequestDto>>("application/json");
         info->addResponse<oatpp::String>(Status::CODE_200, "application/json");
         info->addResponse<oatpp::String>(Status::CODE_400, "application/json");
     }
-    ENDPOINT("POST", "/v1/context/set", setContext, BODY_STRING(oatpp::String, body));
+    ENDPOINT("POST", "/v1/context/set", setContext,
+             BODY_DTO(oatpp::Object<my_api::dto::ContextWriteRequestDto>, requestDto));
 
     // ==================== 修改某个已存在的上下文 ====================
 
@@ -85,14 +87,16 @@ public:
         info->addTag(SWAGGER_TAG);
         info->summary     = "修改某个上下文的值";
         info->description =
-            "修改一条已存在的上下文记录的值（记录必须已存在，否则返回 404）。"
-            "请求体示例：{ \"name\": \"is_recording\", \"value\": false }。"
+            "修改一条已存在的上下文记录的值（记录必须已存在，否则返回 404）。\n"
+            "请求体示例：{\"name\":\"is_recording\", \"value\": false }。\n"
             "可附带 description 字段以同步更新解释。";
+        info->addConsumes<oatpp::Object<my_api::dto::ContextWriteRequestDto>>("application/json");
         info->addResponse<oatpp::String>(Status::CODE_200, "application/json");
         info->addResponse<oatpp::String>(Status::CODE_400, "application/json");
         info->addResponse<oatpp::String>(Status::CODE_404, "application/json");
     }
-    ENDPOINT("POST", "/v1/context/update", updateContext, BODY_STRING(oatpp::String, body));
+    ENDPOINT("POST", "/v1/context/update", updateContext,
+             BODY_DTO(oatpp::Object<my_api::dto::ContextWriteRequestDto>, requestDto));
 
     // ==================== 删除某个上下文 ====================
 

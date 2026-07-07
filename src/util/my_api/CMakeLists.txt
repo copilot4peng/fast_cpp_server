@@ -8,7 +8,7 @@ if (BUILD_MY_API)
     print_colored_message("Building my_api library..." COLOR yellow)
     
     set(MY_API_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src/util/my_api)
-    file(GLOB_RECURSE MY_API_SOURCES ${PROJECT_SOURCE_DIR}/src/util/my_api/*.cpp)
+    file(GLOB_RECURSE MY_API_SOURCES CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/src/util/my_api/*.cpp)
 
     pretty_print_list("MYCONFIG_INCLUDE_DIRECTORIES List" MY_API_INCLUDE_DIRECTORIES)
     pretty_print_list("MYCONFIG_SOURCES List" MY_API_SOURCES)
