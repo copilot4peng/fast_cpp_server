@@ -22,6 +22,7 @@
 #include "MyTools.h"
 #include "SearchlightConfig.h"
 #include "SearchlightManager.h"
+#include "my_airdrop_lock.h"
 
 #include <cstring>
 #include <system_error>
@@ -151,6 +152,7 @@ void Pipeline::LaunchRoBot() {
                 else if (model_name == "file_cache") { LaunchFileCache(model_args); success_count++;}
                 else if (model_name == "audio_server") { LaunchAudioServer(model_args); success_count++;}
                 else if (model_name == "search_light") { LaunchSearchLight(model_args); success_count++;}
+                else if (model_name == "airdrop_lock") { LaunchAirdropLock(model_args); success_count++;}
                 else if (model_name == "2536_comm") { Launch2536Comm(model_args); success_count++;}
                 else { MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);}
                 
@@ -756,6 +758,28 @@ void Pipeline::LaunchSearchLight(const nlohmann::json& args) {
         lightManager.initialize(my_light_config);
         if (lightManager.start()) {
             MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功");
+        } else {
+            MYLOG_ERROR("* 模块: {}, 状态: {}", module_name, "启动失败");
+        }
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
+    }
+}
+
+void Pipeline::LaunchAirdropLock(const nlohmann::json& args) {
+    const std::string module_name = "空投锁模块(AirdropLock)";
+    MYLOG_INFO("===== 开始启动模块: {} =====", module_name);
+    MYLOG_INFO("AirdropLock 模块参数: {}", args.dump(4));
+
+    try {
+        std::string error;
+        if (!my_airdrop_lock::AirdropLockManager::GetInstance().Init(args, &error)) {
+            MYLOG_ERROR("* 模块: {}, 初始化失败: {}", module_name, error);
+            return;
+        }
+
+        if (my_airdrop_lock::AirdropLockManager::GetInstance().Start()) {
+            MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功，已完成默认占空比/频率设置并关闭锁");
         } else {
             MYLOG_ERROR("* 模块: {}, 状态: {}", module_name, "启动失败");
         }
