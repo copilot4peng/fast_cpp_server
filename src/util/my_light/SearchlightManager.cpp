@@ -1,8 +1,16 @@
 #include "SearchlightManager.h"
+#include "MyLog.h"
 
 namespace SearchlightControl {
 
 SearchlightManager::SearchlightManager() {}
+
+SearchlightManager::~SearchlightManager() {
+    MYLOG_INFO("开始析构SearchlightManager");
+    stop();
+    MYLOG_INFO("析构SearchlightManager完成");
+}
+
 
 SearchlightManager& SearchlightManager::getInstance() {
     static SearchlightManager instance;
@@ -15,6 +23,13 @@ void SearchlightManager::initialize(const SearchlightInitConfig& config) {
 
 bool SearchlightManager::start() {
     return searchlight_.start();
+}
+
+bool SearchlightManager::stop() {
+    MYLOG_INFO("[搜索灯] 开始停止 SearchlightManager...");
+    this->shutdown();
+    MYLOG_INFO("[搜索灯] SearchlightManager 已停止，搜索灯已关闭");
+    return true;
 }
 
 bool SearchlightManager::online() {

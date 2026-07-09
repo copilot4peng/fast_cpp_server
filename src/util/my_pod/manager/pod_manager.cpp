@@ -16,6 +16,7 @@ PodManager::PodManager() {
 
 PodManager::~PodManager() {
     MYLOG_INFO("[吊舱管理器] PodManager 析构");
+    Shutdown();
 }
 
 bool PodManager::Init(const nlohmann::json& config) {
@@ -123,6 +124,33 @@ PodResult<void> PodManager::addPod(std::shared_ptr<IPod> pod) {
     MYLOG_INFO("[吊舱管理器] 添加吊舱成功: {} ({})",
                pod_id, podVendorToString(pod->getVendor()));
     return PodResult<void>::success("添加吊舱成功");
+}
+
+void PodManager::Shutdown() {
+    MYLOG_INFO("[吊舱管理器] 开始关闭 PodManager，停止所有吊舱监控和连接...");
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto pods = registry_.listPods();
+    MYLOG_INFO("[吊舱管理器] 当前管理的吊舱数量: {}", pods.size());
+    int index = 1;
+    for (const auto& pod : pods) {
+        MYLOG_INFO("[吊舱管理器] 关闭吊舱: {}: {} ", index, pod->getPodId());
+        ++index;
+        if (!pod) {
+            continue;
+        }
+        if (pod->isMonitorRunning()) {
+            pod->stopMonitor();
+        }
+        if (pod->isConnected()) {
+            pod->disconnect();
+        }
+    }
+
+    registry_.clear();
+    init_config_.clear();
+    initialized_.store(false);
+    MYLOG_INFO("[吊舱管理器] PodManager 已关闭，所有吊舱已停止监控和断开连接");
 }
 
 PodResult<void> PodManager::removePod(const std::string& pod_id) {

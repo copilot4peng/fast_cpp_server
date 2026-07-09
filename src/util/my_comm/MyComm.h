@@ -81,7 +81,7 @@ public:
 
 private:
     MyComm() = default;
-    ~MyComm() = default;
+    ~MyComm() { Stop(); };
 };
 
 }  // namespace my_comm

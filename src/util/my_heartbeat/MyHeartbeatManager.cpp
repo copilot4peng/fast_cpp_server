@@ -19,7 +19,7 @@ HeartbeatManager& HeartbeatManager::GetInstance() {
 
 HeartbeatManager::HeartbeatManager() {
     MYLOG_INFO("HeartbeatManager 开始构造");
-    SetPublisher();
+    // SetPublisher();
     MYLOG_INFO("HeartbeatManager 构造完成");
 }
 

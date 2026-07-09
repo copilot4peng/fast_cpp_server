@@ -115,6 +115,33 @@ bool MyEdgeManager::startAllEdges() {
     }
 }
 
+bool MyEdgeManager::stopAllEdges() {
+    MYLOG_INFO("开始停止所有 Edge 设备...");
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        bool all_success = true;
+        MYLOG_INFO("当前 Edge 设备数量: {}", edges_.size());
+        int index = 0;
+        for (auto& pair : edges_) {
+            index++;
+            MYLOG_INFO("正在停止 ID 为 '{}' 的 Edge 设备，序号: {}", pair.first, index);
+            try {
+                pair.second->Shutdown();
+                MYLOG_INFO("停止 ID 为 '" + pair.first + "' 的 Edge 成功。");
+            } catch (const std::exception& e) {
+                MYLOG_ERROR("停止 Edge '" + pair.first + "' 时发生异常: " + e.what());
+                all_success = false;
+            }
+        }
+        MYLOG_INFO("所有 Edge 设备停止操作已完成。");
+        return all_success;
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("停止所有 Edges 时发生异常: " + std::string(e.what()));
+        return false;
+    }
+    return false;
+}
+
 const std::unique_ptr<IEdge>& MyEdgeManager::getEdgeById(const std::string& edge_id) const {
     try {
         std::lock_guard<std::mutex> lock(mutex_);

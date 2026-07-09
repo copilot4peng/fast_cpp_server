@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <nlohmann/json.hpp>
 #include <memory>
@@ -45,7 +46,7 @@ private:
     void HealthCheck();
 
     // Broker 子进程 PID
-    pid_t broker_pid_{-1};
+    std::atomic<pid_t> broker_pid_{-1};
 
     // 配置文件路径
     std::string broker_bin_;
@@ -54,7 +55,7 @@ private:
     bool broker_foreground_{false};
 
     // 心跳状态
-    bool broker_running_{false};
+    std::atomic<bool> broker_running_{false};
 
     // 配置初始化成功标记
     bool config_initialized_{false};

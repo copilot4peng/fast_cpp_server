@@ -77,6 +77,12 @@ public:
     bool startAllEdges();
 
     /**
+     * @brief 停止所有 Edge 实例。
+     * @return 如果全部停止成功则返回 true，否则返回 false。
+     */
+    bool stopAllEdges();
+
+    /**
      * @brief 通过 ID 获取 Edge（只读）。
      * @param edge_id Edge 的 ID。
      * @return 唯一指针的常量引用。
@@ -192,10 +198,10 @@ public:
     bool appendTaskToEdgeByIdV2(const std::string& edge_id, const my_data::Task& task) const;
 
 private:
-    MyEdgeManager() = default;
-    ~MyEdgeManager() = default;  // 析构函数，用于必要清理
-    MyEdgeManager(const MyEdgeManager&) = delete;
-    MyEdgeManager& operator=(const MyEdgeManager&) = delete;
+    MyEdgeManager()                                 = default;
+    ~MyEdgeManager() { stopAllEdges(); };  // 析构函数，用于必要清理
+    MyEdgeManager(const MyEdgeManager&)             = delete;
+    MyEdgeManager& operator=(const MyEdgeManager&)  = delete;
 
     mutable std::mutex mutex_;  // 用于线程安全
     std::unordered_map<std::string, std::unique_ptr<IEdge>> edges_;  // 以 ID 为键的高效存储

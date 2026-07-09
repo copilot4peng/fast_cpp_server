@@ -371,6 +371,7 @@ void WaitForExitRequest() {
 
 void StopPipeline() {
     MYLOG_INFO("[退出] 开始停止 Pipeline 及其关联模块。");
+    // 让Pipeline 回收的时候自动执行 Stop，不需要显示的执行Stop。
     tools::pipeline::Pipeline::GetInstance().Stop();
     MYLOG_INFO("[退出] Pipeline 停止完成。");
 }
@@ -428,6 +429,7 @@ int RunApplication(int argc, char* argv[], bool& logger_initialized) {
     StopPipeline();
     MYLOG_INFO("[退出] 程序已完成全部收尾流程，即将退出。");
     MyLog::Flush();
+    std::cout << "cout:[退出] 程序已完成全部收尾流程，即将退出。" << std::endl;
     return 0;
 }
 

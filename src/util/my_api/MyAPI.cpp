@@ -333,8 +333,8 @@ bool MyAPI::LoadAPIModel(
         controller = my_api::file_cache_api::FileApiController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("audio_server" == model_name) {
-        MYLOG_INFO("MyAPI: 加载 Audio Server API 模型");
-        controller = my_api::audio_api::AudioController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        // MYLOG_INFO("MyAPI: 加载 Audio Server API 模型");
+        // controller = my_api::audio_api::AudioController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("search_light" == model_name) {
         MYLOG_INFO("MyAPI: 加载 Search Light API 模型");

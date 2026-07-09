@@ -150,6 +150,17 @@ bool AirdropLockManager::Start() {
 	return success;
 }
 
+bool AirdropLockManager::Stop() {
+	std::lock_guard<std::mutex> lock(mutex_);
+	MYLOG_INFO("[空投锁] 开始停止空投锁管理器...");
+	// 关闭串口
+	serial_.Close();
+	initialized_ = false;
+	state_ = AirdropLockState::Uninitialized;
+	MYLOG_INFO("[空投锁] 空投锁管理器已停止，串口已关闭，状态已重置为 uninitialized");
+	return true;
+}
+
 bool AirdropLockManager::FristPowerOnProtection() {
     bool success = false;
 

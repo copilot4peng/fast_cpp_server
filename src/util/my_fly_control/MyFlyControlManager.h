@@ -96,7 +96,7 @@ public:
 
 private:
     MyFlyControlManager();
-    ~MyFlyControlManager();
+    ~MyFlyControlManager(); 
 
     // 获取当前底层飞控对象快照，保证调用期间对象生命周期有效
     std::shared_ptr<MyFlyControl> GetControllerSnapshot() const;

@@ -23,12 +23,14 @@ public:
     bool close_led();
     void get_status(std::string& status);
     bool start();
+    bool stop();
     void shutdown();
 
     Searchlight& device();
 
 private:
     SearchlightManager();
+    ~SearchlightManager();
     SearchlightManager(const SearchlightManager&) = delete;
     SearchlightManager& operator=(const SearchlightManager&) = delete;
 

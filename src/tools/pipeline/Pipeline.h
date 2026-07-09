@@ -7,7 +7,6 @@
 #include <thread>
 #include <atomic>
 #include <nlohmann/json.hpp>
-#include "MyLog.h"
 
 namespace tools {
 namespace pipeline {
@@ -63,7 +62,7 @@ private:
     
     nlohmann::json config_data_;
     std::atomic<bool> is_running_;
-    std::vector<std::thread> workers_;
+    std::vector<std::thread> workers_; // 该变量无用
 };
 
 } // namespace pipeline

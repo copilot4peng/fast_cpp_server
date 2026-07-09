@@ -60,6 +60,7 @@ public:
 
 	bool Init(const nlohmann::json& config, std::string* err = nullptr);
     bool Start();
+	bool Stop();
 	bool SetDutyCycle(const std::string& duty_cycle, std::string* err = nullptr);
 	bool SetDutyCycle(int duty_cycle, std::string* err = nullptr);
 	bool OpenDropper(std::string* err = nullptr);
@@ -69,6 +70,7 @@ public:
 
 private:
 	AirdropLockManager() = default;
+	~AirdropLockManager() { Stop(); };
 
 	static AirdropLockConfig ParseConfig(const nlohmann::json& config);
 	static std::string NormalizeDutyCycleCommand(const std::string& duty_cycle);
