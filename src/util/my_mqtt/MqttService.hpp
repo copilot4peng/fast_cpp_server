@@ -90,7 +90,7 @@ public:
 
 private:
     MqttService() = default;                                // 私有构造函数
-    ~MqttService();                                         // 私有析构函数
+    ~MqttService() ;                                        // 私有析构函数
     MqttService(const MqttService&) = delete;               // 禁用拷贝构造
     MqttService& operator=(const MqttService&) = delete;    // 禁用赋值操作符
 

@@ -254,6 +254,11 @@ nlohmann::json FastMQTT::Status() {
     status["broker_connected"] = broker_connected_.load();
     status["session_connected"] = session_connected_.load();
     status["ip_alive"] = ip_alive_.load();
+    status["broker_host"] = config_.broker.host;
+    status["broker_port"] = config_.broker.port;
+    status["broker_endpoint"] = config_.broker.host + ":" + std::to_string(config_.broker.port);
+    status["send_queue_capacity"] = config_.thread.send_queue_size;
+    status["recv_queue_capacity"] = config_.thread.recv_queue_size;
 
     {
         std::lock_guard<std::mutex> cb_lk(cb_mutex_);
@@ -276,6 +281,7 @@ nlohmann::json FastMQTT::Status() {
             callback_topics.push_back(std::move(item));
         }
         status["callback_count"] = callback_count;
+        status["topic_count"] = callback_topics.size();
         status["callback_topics"] = std::move(callback_topics);
     }
 

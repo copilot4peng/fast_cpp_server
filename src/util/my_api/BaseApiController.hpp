@@ -81,6 +81,7 @@ private:
             case 409: return Status::CODE_409;
             case 413: return Status::CODE_413;
             case 422: return Status::CODE_422;
+            case 503: return Status::CODE_503;
             case 500: return Status::CODE_500;
             default:  return Status::CODE_500;
         }

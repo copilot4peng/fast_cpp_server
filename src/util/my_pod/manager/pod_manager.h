@@ -113,6 +113,8 @@ public:
      */
     void ResetForTest();
 
+    void Shutdown();
+
 private:
     PodManager();
     ~PodManager();

@@ -7,7 +7,6 @@
 #include <thread>
 #include <atomic>
 #include <nlohmann/json.hpp>
-#include "MyLog.h"
 
 namespace tools {
 namespace pipeline {
@@ -59,10 +58,11 @@ private:
     void LaunchFileCache(const nlohmann::json& args);
     void LaunchAudioServer(const nlohmann::json& args);
     void LaunchSearchLight(const nlohmann::json& args);
+    void LaunchAirdropLock(const nlohmann::json& args);
     
     nlohmann::json config_data_;
     std::atomic<bool> is_running_;
-    std::vector<std::thread> workers_;
+    std::vector<std::thread> workers_; // 该变量无用
 };
 
 } // namespace pipeline

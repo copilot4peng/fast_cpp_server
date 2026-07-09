@@ -17,11 +17,12 @@
 #include "PodStreamManager.h"
 #include "PodConfig.h"
 #include "MyCacheProvider.h"
-#include "MyAudios.h"
+// #include "MyAudios.h"
 #include "MyLog.h"
 #include "MyTools.h"
 #include "SearchlightConfig.h"
 #include "SearchlightManager.h"
+#include "my_airdrop_lock.h"
 
 #include <cstring>
 #include <system_error>
@@ -151,6 +152,7 @@ void Pipeline::LaunchRoBot() {
                 else if (model_name == "file_cache") { LaunchFileCache(model_args); success_count++;}
                 else if (model_name == "audio_server") { LaunchAudioServer(model_args); success_count++;}
                 else if (model_name == "search_light") { LaunchSearchLight(model_args); success_count++;}
+                else if (model_name == "airdrop_lock") { LaunchAirdropLock(model_args); success_count++;}
                 else if (model_name == "2536_comm") { Launch2536Comm(model_args); success_count++;}
                 else { MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);}
                 
@@ -229,7 +231,7 @@ void Pipeline::Start() {
         }
         MYLOG_INFO("------------------------------------------------------------(启动节点列表结束)");
         // 4. 启动机器人
-        LaunchRoBot();
+        // LaunchRoBot();
     } catch (const std::exception& e) {
         // 捕获可能导致的循环中断的顶层异常
         is_running_ = false;
@@ -257,9 +259,8 @@ void Pipeline::LaunchHeartbeat(const nlohmann::json& args) {
         LogArg(module_name + " - 初始参数", args.dump());
         hb.Init(args);
 
-        // 3. 启动线程 (不使用匿名函数/Lambda)
-        // 使用成员函数指针：&类名::函数名, 实例地址
-        workers_.emplace_back(&my_heartbeat::HeartbeatManager::Start, &hb);
+        // 3. 启动线程
+        hb.Start();
 
         MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "线程已成功创建并加入管理列表");
         // sleep 10;
@@ -285,11 +286,11 @@ void Pipeline::LaunchEdgeMonitor(const nlohmann::json& args) {
         LogArg(module_name + " - 初始参数", args.dump());
 
         // 2. 启动线程，让已有的 my_edge::MyEdgeManager 负责启动全部 edge
-        workers_.emplace_back([]() {
-            ::my_edge::MyEdgeManager::GetInstance().startAllEdges();
-        });
-
-        MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "线程已成功创建并加入管理列表");
+        if (my_edge::MyEdgeManager::GetInstance().startAllEdges()) {
+            MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "所有 Edge 设备已成功启动");
+        } else {
+            MYLOG_ERROR("* 模块: {}, 状态: {}", module_name, "启动 Edge 设备失败，请检查配置和日志");
+        }
 
     } catch (const std::exception& e) {
         MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
@@ -343,8 +344,6 @@ void Pipeline::LaunchRestAPI(const nlohmann::json& args) {
             }
         }
         // 2. 获取 API 单例并启动
-        // 注意：MyAPI::Start 内部已经启动了 std::thread，
-        // 所以我们不需要再把 MyAPI::Start 丢进 workers_
         my_api::MyAPI::GetInstance().Start(port);
 
         // 3. 为了让 Pipeline::Stop 能关闭 API，
@@ -442,26 +441,12 @@ void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
         MYLOG_INFO("MQTTComm 模块初始化成功");
     }
 
-    // 注册消息回调等（如果需要）
-    // // mqtt_service.SetMessageCallback(...);
-    mqtt_service.AddRoute("/system/heartbeats/do_operation", [](const std::string& topic, const std::string& payload) {
-        MYLOG_INFO("MQTTComm 收到操作请求，Topic: {}, Payload: {}", topic, payload);
-        // 处理操作请求的逻辑
-    });
-    
-    // MyProto::Person ph;
-    // std::string pb_data = "";
-    // ph.SerializeToString(&pb_data);
-    // while (true) {
-    //     mqtt_service.Publish("/test/ph_data", pb_data, false, 1);
-    //     std::this_thread::sleep_for(std::chrono::seconds(1));
-    // }
-    // 注入 publisher 适配器（heartbeat 只看到 IMqttPublisher）
-    // my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());
-    // my_heartbeat::HeartbeatManager::GetInstance().SetPublisher(mqtt_service.GetPublisher());
-
-    // 启动线程
-    workers_.emplace_back(&my_mqtt::MqttService::Start, &mqtt_service);
+    if (!mqtt_service.Start()) {
+        MYLOG_ERROR("MQTTComm 模块启动失败，跳过启动");
+        return;
+    } else {
+        MYLOG_INFO("MQTTComm 模块启动成功");
+    }
     MYLOG_INFO("MQTTComm 模块线程已成功创建并加入管理列表");
 
 }
@@ -470,14 +455,6 @@ void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
 
 void Pipeline::LaunchComm(const nlohmann::json& args) {
     int interval = args.value("interval_sec_", 3);
-
-    workers_.emplace_back([this, interval]() {
-        MYLOG_INFO("* Arg: {}, Value: {}", "Comm", "Thread Running");
-        while (is_running_) {
-            // TODO: 通信逻辑
-            std::this_thread::sleep_for(std::chrono::seconds(interval));
-        }
-    });
 }
 
 void Pipeline::LaunchSystemHealthy(const nlohmann::json& args) {
@@ -487,14 +464,6 @@ void Pipeline::LaunchSystemHealthy(const nlohmann::json& args) {
     if (args.contains("edges")) {
         MYLOG_INFO("* Arg: {}, Value: {}", "SystemHealthy", "Found Edges, processing connections...");
     }
-
-    workers_.emplace_back([this, interval, args]() {
-        MYLOG_INFO("* Arg: {}, Value: {}", "SystemHealthy", "Thread Running");
-        while (is_running_) {
-            // TODO: 健康检查逻辑
-            std::this_thread::sleep_for(std::chrono::seconds(interval));
-        }
-    });
 }
 
 void Pipeline::LaunchEdge(const nlohmann::json& args) {
@@ -722,23 +691,23 @@ void Pipeline::LaunchAudioServer(const nlohmann::json& args) {
     MYLOG_INFO("===== 开始启动模块: {} =====", module_name);
     MYLOG_INFO("AudioServer 模块参数: {}", args.dump(4));
 
-    try {
-        // 初始化全局音频管理器
-        if (!my_audio::MyAudios::GetInstance().Init(args)) {
-            MYLOG_ERROR("* 模块: {}, 初始化失败", module_name);
-            return;
-        }
+    // try {
+    //     // 初始化全局音频管理器
+    //     if (!my_audio::MyAudios::GetInstance().Init(args)) {
+    //         MYLOG_ERROR("* 模块: {}, 初始化失败", module_name);
+    //         return;
+    //     }
 
-        // 启动所有音频设备（含 AudioLoop 线程）
-        if (!my_audio::MyAudios::GetInstance().Start()) {
-            MYLOG_ERROR("* 模块: {}, 设备启动失败", module_name);
-            return;
-        }
+    //     // 启动所有音频设备（含 AudioLoop 线程）
+    //     if (!my_audio::MyAudios::GetInstance().Start()) {
+    //         MYLOG_ERROR("* 模块: {}, 设备启动失败", module_name);
+    //         return;
+    //     }
 
-        MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功");
-    } catch (const std::exception& e) {
-        MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
-    }
+    //     MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功");
+    // } catch (const std::exception& e) {
+    //     MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
+    // }
 }
 
 void Pipeline::LaunchSearchLight(const nlohmann::json& args) {
@@ -764,17 +733,66 @@ void Pipeline::LaunchSearchLight(const nlohmann::json& args) {
     }
 }
 
-void Pipeline::Stop() {
-    is_running_ = false;
-    // 显式停止 API 服务
-    my_api::MyAPI::GetInstance().Stop();
-    // 停止音频服务
-    my_audio::MyAudios::GetInstance().Stop();
-    for (auto& t : workers_) {
-        if (t.joinable()) t.join();
+void Pipeline::LaunchAirdropLock(const nlohmann::json& args) {
+    const std::string module_name = "空投锁模块(AirdropLock)";
+    MYLOG_INFO("===== 开始启动模块: {} =====", module_name);
+    MYLOG_INFO("AirdropLock 模块参数: {}", args.dump(4));
+
+    try {
+        std::string error;
+        if (!my_airdrop_lock::AirdropLockManager::GetInstance().Init(args, &error)) {
+            MYLOG_ERROR("* 模块: {}, 初始化失败: {}", module_name, error);
+            return;
+        }
+
+        if (my_airdrop_lock::AirdropLockManager::GetInstance().Start()) {
+            MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功，已完成默认占空比/频率设置并关闭锁");
+        } else {
+            MYLOG_ERROR("* 模块: {}, 状态: {}", module_name, "启动失败");
+        }
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
     }
-    workers_.clear();
+}
+
+void Pipeline::Stop() {
+    if (!is_running_.exchange(false)) {
+        MYLOG_INFO("* Arg: {}, Value: {}", "停止跳过", "Pipeline 已经处于停止状态，无需重复停止");
+        return;
+    }
+    is_running_ = false;
+    MYLOG_INFO("=========================================EXIT==============================B");
+    MYLOG_INFO("开始停止 Pipeline 模块...");
+    // 先停止通信门面，再停止其底层 MQTT 传输，避免后台线程在进程退出时仍然存活。
+    my_comm::MyComm::GetInstance().Stop();
+    // 关闭 AirdropLockManager，确保锁状态安全
+    my_airdrop_lock::AirdropLockManager::GetInstance().Stop();
+    // 关闭 SearchlightManager，确保搜索灯安全关闭
+    SearchlightControl::SearchlightManager::getInstance().stop();
+    // 停止音频服务
+    // my_audio::MyAudios::GetInstance().Stop();
+    // LaunchFileCache 非常驻线程，FileCache 资源会在进程退出时自动释放，无需显式 Stop
+    // 停止 MediamtxMonitorV2 的 PodStreamManager
+    pod_stream::PodStreamManager::GetInstance().Stop();
+    // 停止 MediamtxMonitorV1 的 RtspRelayMonitorManager
+    PodModule::PodManager::GetInstance().Shutdown();
+    // 停止 SoftHealthyMonitor
+    fly_control::MyFlyControlManager::GetInstance().Stop();
+    // 停止 SoftHealthMonitorManager
+    MySoftHealthy::SoftHealthMonitorManager::getInstance().stop();
+    fast_mqtt::FastMQTT::GetInstance().Destroy();
+    my_mqtt::MqttService::GetInstance().Stop();
+    // 停止 MQTT Broker 管理器
+    my_mqtt_broker_manager::MyMqttBrokerManager::GetInstance().Stop();
+    // 停止 EdgeManager，确保所有 Edge 设备安全关闭
+    my_edge::MyEdgeManager::GetInstance().stopAllEdges();
+    // 停止 HeartbeatManager，确保心跳线程安全退出
+    my_heartbeat::HeartbeatManager::GetInstance().Stop();
+    // 停止MyAPI服务，确保所有API线程安全退出
+    my_api::MyAPI::GetInstance().Stop();
+
     MYLOG_INFO("* Arg: {}, Value: {}", "Pipeline", "System Stopped Cleanly");
+    MYLOG_INFO("=========================================EXIT==============================E");
 }
 
 } // namespace pipeline

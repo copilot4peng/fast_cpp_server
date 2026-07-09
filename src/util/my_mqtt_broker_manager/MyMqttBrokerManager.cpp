@@ -18,10 +18,10 @@ void MyMqttBrokerManager::Init(const nlohmann::json& config) {
     MYLOG_INFO("初始化 MyMqttBrokerManager 配置: {}", config.dump(4));
     try {
         if (config.contains("broker") && config["broker"].contains("bin")) {
-            broker_bin_ = config["broker"]["bin"];
-            broker_config_ = config["broker"]["config"];
-            broker_port_ = config["broker"]["port"];
-            broker_foreground_ = config["broker"]["foreground"];
+            broker_bin_         = config["broker"]["bin"];
+            broker_config_      = config["broker"]["config"];
+            broker_port_        = config["broker"]["port"];
+            broker_foreground_  = config["broker"]["foreground"];
             config_initialized_ = true;
         } else {
             MYLOG_ERROR("初始化 MyMqttBrokerManager 配置失败: broker.bin 或 broker.config 不存在");
@@ -34,6 +34,11 @@ void MyMqttBrokerManager::Init(const nlohmann::json& config) {
 bool MyMqttBrokerManager::Start() {
     if (!config_initialized_) {
         MYLOG_ERROR("MyMqttBrokerManager 配置未初始化");
+        return false;
+    }
+
+    if (broker_manager_thread_.joinable()) {
+        MYLOG_WARN("MyMqttBrokerManager 已在运行中，忽略重复 Start 请求");
         return false;
     }
 
@@ -59,11 +64,11 @@ void MyMqttBrokerManager::Stop() {
     MYLOG_INFO("停止 MyMqttBrokerManager");
 
     // 1) 首先关闭健康检查 / 管理循环，防止其在我们停止期间重启 broker
-    broker_running_ = false;
+    broker_running_.store(false);
 
     // 2) 如果有启动的 broker 进程，发送 SIGTERM 尝试优雅退出
-    if (broker_pid_ > 0) {
-        pid_t pid = broker_pid_;
+    const pid_t pid = broker_pid_.load();
+    if (pid > 0) {
         MYLOG_INFO("向 Broker 进程发送 SIGTERM，PID={}", pid);
         kill(pid, SIGTERM);
 
@@ -97,7 +102,7 @@ void MyMqttBrokerManager::Stop() {
         }
 
         // 6) 清理 pid 标记
-        broker_pid_ = -1;
+        broker_pid_.store(-1);
     } else {
         MYLOG_INFO("没有需要停止的 Broker 进程（broker_pid_ <= 0）");
     }
@@ -118,16 +123,17 @@ void MyMqttBrokerManager::Stop() {
 
 bool MyMqttBrokerManager::IsRunning() const {
     bool broker_running = false;
-    broker_running = broker_pid_ > 0 && kill(broker_pid_, 0) == 0;
+    const pid_t pid = broker_pid_.load();
+    broker_running = pid > 0 && kill(pid, 0) == 0;
     MYLOG_INFO("Broker 进程状态: {}", broker_running ? "运行中" : "已停止");
     return broker_running;
 }
 
 nlohmann::json MyMqttBrokerManager::GetHeartbeat() const {
     nlohmann::json heartbeat_info;
-    heartbeat_info["broker_status"] = broker_running_ ? "running" : "stopped";
+    heartbeat_info["broker_status"] = broker_running_.load() ? "running" : "stopped";
     heartbeat_info["port"] = broker_port_;
-    heartbeat_info["pid"] = broker_pid_;
+    heartbeat_info["pid"] = broker_pid_.load();
     MYLOG_INFO("获取 Broker 心跳信息: {}", heartbeat_info.dump(4));
     return heartbeat_info;
 }
@@ -154,9 +160,9 @@ void MyMqttBrokerManager::BrokerProcessManager() {
                 }
             }
             // 父进程保存子进程的 PID
-            broker_pid_ = pid;
-            broker_running_ = true;
-            MYLOG_INFO("Mosquitto Broker 进程已启动, PID: {}", broker_pid_);
+            broker_pid_.store(pid);
+            broker_running_.store(true);
+            MYLOG_INFO("Mosquitto Broker 进程已启动, PID: {}", broker_pid_.load());
             startMQTTBrokerStatus = true;
         } catch (const std::exception& e) {
             MYLOG_ERROR("启动 MQTT Broker 失败，5 秒后重试: {}", e.what());
@@ -168,13 +174,15 @@ void MyMqttBrokerManager::BrokerProcessManager() {
 }
 
 void MyMqttBrokerManager::HealthCheck() {
-    while (broker_running_) {
+    while (broker_running_.load()) {
         if (IsRunning()) {
             MYLOG_INFO("MQTT Broker 进程健康检查成功");
             std::this_thread::sleep_for(std::chrono::seconds(10));
         } else {
-            MYLOG_WARN("MQTT Broker 进程已停止； 重新启动...");
-            Start();
+            MYLOG_WARN("MQTT Broker 进程已停止；结束健康检查并等待外部重新启动");
+            broker_running_.store(false);
+            broker_pid_.store(-1);
+            break;
         }
     }
 }

@@ -9,8 +9,11 @@
 #include "controller/mediamtx_monitor/MediamtxMonitorController.h"
 #include "controller/file_cache/FileApiController.h"
 
+#include "controller/fast_mqtt/FastMQTTController.h"
+
 #include "controller/audio/AudioController.h"
 #include "controller/light/LightController.h"
+#include "controller/airdrop_lock/AirdropLockController.h"
 #include "controller/ip/MyIPController.h"
 #include "controller/demo/edges/EdgesController.hpp"
 #include "controller/demo/tuna/TunaController.h"
@@ -330,12 +333,16 @@ bool MyAPI::LoadAPIModel(
         controller = my_api::file_cache_api::FileApiController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("audio_server" == model_name) {
-        MYLOG_INFO("MyAPI: 加载 Audio Server API 模型");
-        controller = my_api::audio_api::AudioController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        // MYLOG_INFO("MyAPI: 加载 Audio Server API 模型");
+        // controller = my_api::audio_api::AudioController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("search_light" == model_name) {
         MYLOG_INFO("MyAPI: 加载 Search Light API 模型");
         controller = my_api::light_api::LightController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        has_model = true;
+    } else if ("airdrop_lock" == model_name) {
+        MYLOG_INFO("MyAPI: 加载空投锁 API 模型");
+        controller = my_api::airdrop_lock_api::AirdropLockController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("ip" == model_name) {
         MYLOG_INFO("MyAPI: 加载 IP API 模型");
@@ -344,6 +351,10 @@ bool MyAPI::LoadAPIModel(
     } else if ("context" == model_name) {
         MYLOG_INFO("MyAPI: 加载运行时上下文 API 模型");
         controller = my_api::context_api::ContextController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        has_model = true;
+    } else if ("fast_mqtt" == model_name) {
+        MYLOG_INFO("MyAPI: 加载 FastMQTT API 模型");
+        controller = my_api::fast_mqtt_api::FastMQTTController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else {
         MYLOG_WARN("MyAPI: 未知的 API 模型名称: {}", model_name);

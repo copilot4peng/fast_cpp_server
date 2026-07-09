@@ -25,6 +25,7 @@ target_link_libraries(${TEST_PROGRAM_NAME} PRIVATE
     my_arg_parser
     my_doctor
     my_mqtt
+    my_fast_MQTT
     my_edge
     my_control
     my_device

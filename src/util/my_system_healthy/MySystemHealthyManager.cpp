@@ -1,4 +1,5 @@
 #include <chrono>
+#include <pthread.h>
 
 #include "MySystemHealthyManager.h"
 #include "CPUInfoTools.h"
@@ -9,6 +10,20 @@
 #include "ProcessInfoTools.h"
 
 // using namespace SystemHealthyTools;
+
+namespace {
+
+constexpr char kWorkerThreadName[] = "sys_health_mgr";
+
+void SetCurrentThreadName(const char* name) {
+#if defined(__linux__)
+  pthread_setname_np(pthread_self(), name);
+#else
+  (void)name;
+#endif
+}
+
+}  // namespace
 
 
 namespace MySystemHealthy {
@@ -39,6 +54,8 @@ void MySystemHealthyManager::Shutdown() {
 }
 
 void MySystemHealthyManager::WorkerLoop() {
+  SetCurrentThreadName(kWorkerThreadName);
+
   while (running_) {
     SystemHealthy::SystemInfo info;
     info.set_os_name("Linux"); // todo
