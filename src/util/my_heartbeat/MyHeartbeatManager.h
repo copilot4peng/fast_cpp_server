@@ -61,6 +61,12 @@ private:
     void BuildHeartbeat();
 
     /**
+     * @brief 打印心跳数据到日志
+     * 
+     */
+    void LogHeartbeatData();
+    
+    /**
      * @brief 发送心跳数据
      * 
      * @param data 心跳数据

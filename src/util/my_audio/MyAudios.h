@@ -9,6 +9,7 @@
  */
 
 #include "BaseAudio.h"
+#include "MyLog.h"
 
 #include <map>
 #include <vector>
@@ -34,6 +35,7 @@ public:
      * @brief 获取单例实例
      */
     static MyAudios& GetInstance() {
+        MYLOG_INFO("[MyAudios] 获取全局音频设备管理器实例");
         static MyAudios instance;
         return instance;
     }
@@ -69,6 +71,7 @@ public:
      */
     bool Init(const nlohmann::json& config);
 
+    bool AddAudioDevice(const std::string& key, const nlohmann::json& dev_config);
     /**
      * @brief 启动所有已初始化的音频设备
      * @return true 至少有一个设备启动成功

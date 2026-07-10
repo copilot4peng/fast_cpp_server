@@ -6,7 +6,7 @@ print_colored_message("Configuring Unit Tests..." COLOR yellow)
 include(cmake/deps/setup_gtest.cmake)
 
 set(TEST_PROGRAM_NAME ${PROJECT_NAME}_Test)
-file(GLOB_RECURSE TEST_SOURCES "test/*.cpp")
+file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "test/*.cpp")
 
 pretty_print_list("TEST_SOURCES List" TEST_SOURCES)
 

@@ -17,7 +17,7 @@
 #include "PodStreamManager.h"
 #include "PodConfig.h"
 #include "MyCacheProvider.h"
-// #include "MyAudios.h"
+#include "MyAudios.h"
 #include "MyLog.h"
 #include "MyTools.h"
 #include "SearchlightConfig.h"
@@ -82,6 +82,7 @@ void Pipeline::Init(const nlohmann::json& config) {
     MYLOG_INFO("------------------------------------------------------------");
     LogRecursive("Config", config_data_);
     MYLOG_INFO("------------------------------------------------------------");
+    working_models_ = {}; // 清空之前的工作模型列表
 }
 
 void Pipeline::LaunchRoBot() {
@@ -134,7 +135,7 @@ void Pipeline::LaunchRoBot() {
                 }
 
                 MYLOG_WARN("* Arg: {}, Value: {}", "节点分发开始", "正在启动节点[" + node_index + "] 模块名称 >>> " + model_name + " <<<");
-
+                working_models_.push_back(model_name); // 记录已启动的模型名称
                 // --- 业务逻辑分发 ---
                 if (model_name == "heartbeat") { LaunchHeartbeat(model_args); success_count++;}
                 else if (model_name == "mqtt_comm") { LaunchMQTTComm(model_args); success_count++;}
@@ -180,6 +181,9 @@ void Pipeline::LaunchRoBot() {
             "全部节点处理完成。总计: " + std::to_string(total_nodes) + 
             ", 成功启动: " + std::to_string(success_count) + 
             ", 失败/跳过: " + std::to_string(total_nodes - success_count));
+        for (const auto& model : working_models_) {
+            MYLOG_INFO("🟡 已启动模型: {}", model);
+        }
 
     } catch (const std::exception& e) {
         // 捕获可能导致的循环中断的顶层异常
@@ -231,7 +235,7 @@ void Pipeline::Start() {
         }
         MYLOG_INFO("------------------------------------------------------------(启动节点列表结束)");
         // 4. 启动机器人
-        // LaunchRoBot();
+        LaunchRoBot();
     } catch (const std::exception& e) {
         // 捕获可能导致的循环中断的顶层异常
         is_running_ = false;
@@ -241,6 +245,15 @@ void Pipeline::Start() {
 }
 
 // --- 模块逻辑实现区 ---
+
+bool Pipeline::ModelIsRunning(const std::string& model_name) {
+    for (const auto& name : working_models_) {
+        if (name == model_name) {
+            return true;
+        }
+    }
+    return false;
+}
 
 // --- 心跳模块启动函数 ---
 void Pipeline::LaunchHeartbeat(const nlohmann::json& args) {
@@ -691,23 +704,27 @@ void Pipeline::LaunchAudioServer(const nlohmann::json& args) {
     MYLOG_INFO("===== 开始启动模块: {} =====", module_name);
     MYLOG_INFO("AudioServer 模块参数: {}", args.dump(4));
 
-    // try {
-    //     // 初始化全局音频管理器
-    //     if (!my_audio::MyAudios::GetInstance().Init(args)) {
-    //         MYLOG_ERROR("* 模块: {}, 初始化失败", module_name);
-    //         return;
-    //     }
+    try {
+        // 初始化全局音频管理器
+        if (!my_audio::MyAudios::GetInstance().Init(args)) {
+            MYLOG_ERROR("* 模块: {}, 初始化失败", module_name);
+            return;
+        } else {
+            MYLOG_INFO("* 模块: {}, 初始化成功", module_name);
+        }
 
-    //     // 启动所有音频设备（含 AudioLoop 线程）
-    //     if (!my_audio::MyAudios::GetInstance().Start()) {
-    //         MYLOG_ERROR("* 模块: {}, 设备启动失败", module_name);
-    //         return;
-    //     }
+        // 启动所有音频设备（含 AudioLoop 线程）
+        if (!my_audio::MyAudios::GetInstance().Start()) {
+            MYLOG_ERROR("* 模块: {}, 设备启动失败", module_name);
+            return;
+        } else {
+            MYLOG_INFO("* 模块: {}, 设备启动成功", module_name);
+        }
 
-    //     MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功");
-    // } catch (const std::exception& e) {
-    //     MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
-    // }
+        MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功");
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
+    }
 }
 
 void Pipeline::LaunchSearchLight(const nlohmann::json& args) {
@@ -763,6 +780,7 @@ void Pipeline::Stop() {
     is_running_ = false;
     MYLOG_INFO("=========================================EXIT==============================B");
     MYLOG_INFO("开始停止 Pipeline 模块...");
+
     // 先停止通信门面，再停止其底层 MQTT 传输，避免后台线程在进程退出时仍然存活。
     my_comm::MyComm::GetInstance().Stop();
     // 关闭 AirdropLockManager，确保锁状态安全
@@ -770,7 +788,12 @@ void Pipeline::Stop() {
     // 关闭 SearchlightManager，确保搜索灯安全关闭
     SearchlightControl::SearchlightManager::getInstance().stop();
     // 停止音频服务
-    // my_audio::MyAudios::GetInstance().Stop();
+    if (ModelIsRunning("audio_server")) {
+        MYLOG_INFO("* Arg: {}, Value: {}", "停止音频服务", "正在停止音频服务...");
+        my_audio::MyAudios::GetInstance().Stop();
+    } else {
+        MYLOG_INFO("* Arg: {}, Value: {}", "停止音频服务", "音频服务未启动，无需停止");
+    }
     // LaunchFileCache 非常驻线程，FileCache 资源会在进程退出时自动释放，无需显式 Stop
     // 停止 MediamtxMonitorV2 的 PodStreamManager
     pod_stream::PodStreamManager::GetInstance().Stop();
