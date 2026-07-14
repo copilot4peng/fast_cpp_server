@@ -59,6 +59,7 @@ private:
     void LaunchAudioServer(const nlohmann::json& args);
     void LaunchSearchLight(const nlohmann::json& args);
     void LaunchAirdropLock(const nlohmann::json& args);
+    void LaunchGasDetector(const nlohmann::json& args);
     
     bool ModelIsRunning(const std::string& model_name);
     nlohmann::json config_data_;

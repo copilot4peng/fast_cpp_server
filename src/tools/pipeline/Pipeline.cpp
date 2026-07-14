@@ -7,6 +7,7 @@
 #include "MqttService.hpp"
 #include "FastMQTT.hpp"
 #include "CSY2536Comm.h"
+#include "MyGasDetectorPoll.h"
 #include "MyComm.h"
 #include "SoftHealthMonitorManager.h"
 #include "SoftHealthMonitorConfig.h"
@@ -155,6 +156,7 @@ void Pipeline::LaunchRoBot() {
                 else if (model_name == "search_light") { LaunchSearchLight(model_args); success_count++;}
                 else if (model_name == "airdrop_lock") { LaunchAirdropLock(model_args); success_count++;}
                 else if (model_name == "2536_comm") { Launch2536Comm(model_args); success_count++;}
+                else if (model_name == "gas_detector") { LaunchGasDetector(model_args); success_count++;}
                 else { MYLOG_INFO("* Arg: {}, Value: {}", "节点[" + node_index + "]警告", "未知的模型名称: " + model_name);}
                 
                 MYLOG_INFO("* Arg: {}, Value: {}", "节点分发完成", "节点[" + node_index + "] 已成功加入监听列表");
@@ -442,6 +444,28 @@ void Pipeline::Launch2536Comm(const nlohmann::json& args) {
     }
 }
 
+void Pipeline::LaunchGasDetector(const nlohmann::json& args) {
+    const std::string module_name = "GasDetector模块";
+    MYLOG_INFO("===== 开始启动模块: {} =====", module_name);
+
+    try {
+        my_gas_detector_poll::GasDetectorPoll& gas_detector = my_gas_detector_poll::GasDetectorPoll::GetInstance();
+        if (!gas_detector.Init(args)) {
+            MYLOG_ERROR("* 模块: {}, 初始化失败，跳过启动", module_name);
+            return;
+        } else {
+            MYLOG_INFO("* 模块: {}, 初始化成功", module_name);
+            gas_detector.Start();
+        }
+
+        MYLOG_INFO("* 模块: {}, 状态: {}", module_name, "启动成功");
+
+    } catch (const std::exception& e) {
+        MYLOG_ERROR("* 模块: {}, 捕获异常: {}", module_name, e.what());
+    } catch (...) {
+        MYLOG_ERROR("* 模块: {}, 捕获未知严重异常", module_name);
+    }
+}
 
 void Pipeline::LaunchMQTTComm(const nlohmann::json& args) {
     int interval = args.value("interval_sec_", 3);
