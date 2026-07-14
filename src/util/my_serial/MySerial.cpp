@@ -11,6 +11,8 @@ namespace my_serial {
 
 namespace {
 
+// 配置中的枚举值允许使用大小写混合的字符串；统一转小写后再做匹配，
+// 同时保留数字形式（例如数据位 8、停止位 1）由调用方传入的原始语义。
 std::string NormalizeToken(const std::string& value) {
     std::string normalized = value;
     std::transform(normalized.begin(), normalized.end(), normalized.begin(),
@@ -18,6 +20,8 @@ std::string NormalizeToken(const std::string& value) {
     return normalized;
 }
 
+// 日志本身不能因为 JSON 序列化异常而掩盖真正的初始化错误，因此日志
+// 专用的 dump 必须兜底。该函数只影响诊断文本，不影响配置解析结果。
 std::string SafeJsonDump(const nlohmann::json& value) {
     try {
         return value.dump();
@@ -28,6 +32,9 @@ std::string SafeJsonDump(const nlohmann::json& value) {
     }
 }
 
+// 将 JSON 中的字符串、整数或浮点数转换为枚举解析所需的 token。这里
+// 允许数字是为了兼容设备配置文件中的 data_bits=8、stop_bits=1 等写法；
+// 布尔值、数组、对象和 null 会被明确拒绝。
 std::string JsonValueToToken(const nlohmann::json& value, const char* field_name) {
     if (value.is_string()) {
         return NormalizeToken(value.get<std::string>());
@@ -44,6 +51,8 @@ std::string JsonValueToToken(const nlohmann::json& value, const char* field_name
     throw std::invalid_argument(std::string("serial config field '") + field_name + "' must be a string or number");
 }
 
+// port 是模块的标准字段，device 是兼容已有设备配置的别名。两者同时
+// 存在时优先使用 port；空字符串不会被当作有效设备路径。
 std::string GetRequiredPortValue(const nlohmann::json& cfg) {
     for (const char* key : {"port", "device"}) {
         if (!cfg.contains(key) || cfg.at(key).is_null()) {
@@ -63,6 +72,8 @@ std::string GetRequiredPortValue(const nlohmann::json& cfg) {
     throw std::invalid_argument("serial config missing non-empty field: port/device");
 }
 
+// 读取无符号 32 位整数配置，并对 JSON 整数和字符串形式统一做范围校验。
+// 负数、超出 uint32_t 范围的数值以及非整数类型都不会静默截断。
 uint32_t GetUint32Value(const nlohmann::json& cfg,
                        std::initializer_list<const char*> keys,
                        uint32_t default_value) {
@@ -102,6 +113,8 @@ uint32_t GetUint32Value(const nlohmann::json& cfg,
     return default_value;
 }
 
+// 按字段别名查找一个 token；第一个存在且非 null 的字段生效。该规则与
+// 端口和波特率的兼容字段保持一致，便于迁移旧版设备配置。
 std::string GetTokenValue(const nlohmann::json& cfg,
                           std::initializer_list<const char*> keys,
                           const std::string& default_value) {
@@ -114,6 +127,8 @@ std::string GetTokenValue(const nlohmann::json& cfg,
     return NormalizeToken(default_value);
 }
 
+// 当所有读写超时参数构成最常见的简单超时组合时，使用 serial 库提供的
+// simpleTimeout；否则保留每一项参数，支持更细粒度的读写超时策略。
 serial::Timeout BuildTimeout(const SerialInitOptions& options) {
     if (options.inter_byte_timeout_ms == 0 &&
         options.read_timeout_constant_ms == options.timeout_ms &&
@@ -131,6 +146,8 @@ serial::Timeout BuildTimeout(const SerialInitOptions& options) {
         options.write_timeout_multiplier_ms);
 }
 
+// 统一封装底层 serial 库异常：接口不向业务层抛出常规运行时错误，而是
+// 返回失败值，并同时更新调用方 err 和实例级 last_error_。成功时清除旧错。
 template <typename Fn>
 bool ExecuteWithError(std::string* err, std::string& last_error, Fn&& fn) {
     try {
@@ -154,6 +171,7 @@ bool ExecuteWithError(std::string* err, std::string& last_error, Fn&& fn) {
 MySerial::MySerial() = default;
 
 MySerial::~MySerial() {
+    // Close() 自身带锁，析构时复用统一的关闭路径，避免遗漏底层资源释放。
     Close();
 }
 
@@ -170,6 +188,9 @@ bool MySerial::Init(const nlohmann::json& cfg, std::string* err) {
     std::string current_step = "start";
 
     try {
+        // 初始化采用“先准备新对象、成功后提交”的结构：配置解析和底层
+        // 参数设置失败时不会留下半初始化的 serial_；但重新初始化前的
+        // 旧端口会先关闭，失败后不会自动回滚到旧实例。
         MYLOG_INFO("[MySerial] Begin Init, cfg={}", cfg.dump(4));
 
         if (serial_ && serial_->isOpen()) {
@@ -218,6 +239,8 @@ bool MySerial::Init(const nlohmann::json& cfg, std::string* err) {
         new_serial->setFlowcontrol(ParseFlowcontrol(parsed_options.flowcontrol));
 
         if (parsed_options.auto_open) {
+            // open() 失败会直接进入统一错误处理，因而 Init() 返回 false，
+            // 调用方可通过 err 或 GetSnapshotJson() 获取失败原因。
             current_step = "auto open port";
             MYLOG_INFO("[MySerial] auto_open=true, trying to open port: {}", parsed_options.port);
             new_serial->open();
@@ -288,6 +311,8 @@ bool MySerial::Init(const nlohmann::json& cfg, std::string* err) {
 bool MySerial::Open(std::string* err) {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    // Init(auto_open=false) 只完成参数配置，不占用设备；需要实际收发时
+    // 必须显式 Open()。重复 Open() 被视为成功，不会重复调用底层 open。
     return ExecuteWithError(err, last_error_, [this]() {
         if (!initialized_ || !serial_) {
             throw std::runtime_error("MySerial is not initialized");
@@ -301,6 +326,7 @@ bool MySerial::Open(std::string* err) {
 
 void MySerial::Close() {
     std::lock_guard<std::mutex> lock(mutex_);
+    // Close() 是幂等的：未创建、未打开或已经关闭的实例都可以安全调用。
     if (serial_ && serial_->isOpen()) {
         serial_->close();
         MYLOG_INFO("[MySerial] Port closed: {}", options_.port);
@@ -315,6 +341,8 @@ bool MySerial::IsOpen() const {
 size_t MySerial::Write(const std::string& data, std::string* err) {
     std::lock_guard<std::mutex> lock(mutex_);
     size_t written = 0;
+    // 字符串按字节写出，不附加换行符、不做编码转换；文本协议需要的
+    // \r、\n 必须由调用方显式放入 data。
     ExecuteWithError(err, last_error_, [this, &data, &written]() {
         if (!initialized_ || !serial_) {
             throw std::runtime_error("MySerial is not initialized");
@@ -330,6 +358,8 @@ size_t MySerial::Write(const std::string& data, std::string* err) {
 size_t MySerial::Write(const std::vector<uint8_t>& data, std::string* err) {
     std::lock_guard<std::mutex> lock(mutex_);
     size_t written = 0;
+    // vector<uint8_t> 路径用于二进制帧，数据中的 0x00 等字节不会被当作
+    // C 字符串结束符处理。
     ExecuteWithError(err, last_error_, [this, &data, &written]() {
         if (!initialized_ || !serial_) {
             throw std::runtime_error("MySerial is not initialized");
@@ -345,6 +375,8 @@ size_t MySerial::Write(const std::vector<uint8_t>& data, std::string* err) {
 std::string MySerial::Read(size_t size, std::string* err) {
     std::lock_guard<std::mutex> lock(mutex_);
     std::string result;
+    // Read() 的长度参数是字节数而不是字符数；实际返回长度取决于底层
+    // 超时和当前接收数据量，协议层如需严格帧长应自行检查 result.size()。
     ExecuteWithError(err, last_error_, [this, size, &result]() {
         if (!initialized_ || !serial_) {
             throw std::runtime_error("MySerial is not initialized");
@@ -360,6 +392,8 @@ std::string MySerial::Read(size_t size, std::string* err) {
 std::vector<uint8_t> MySerial::ReadBytes(size_t size, std::string* err) {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<uint8_t> result;
+    // 先按期望长度分配，再按底层实际读取长度收缩结果，避免调用方误把
+    // 未填充的尾部字节当成有效协议内容。
     ExecuteWithError(err, last_error_, [this, size, &result]() {
         if (!initialized_ || !serial_) {
             throw std::runtime_error("MySerial is not initialized");
@@ -377,6 +411,7 @@ std::vector<uint8_t> MySerial::ReadBytes(size_t size, std::string* err) {
 std::string MySerial::ReadLine(size_t max_size, const std::string& eol, std::string* err) {
     std::lock_guard<std::mutex> lock(mutex_);
     std::string result;
+    // ReadLine() 的结束符由调用方指定，适合文本设备的 \n、\r\n 等行协议。
     ExecuteWithError(err, last_error_, [this, max_size, &eol, &result]() {
         if (!initialized_ || !serial_) {
             throw std::runtime_error("MySerial is not initialized");
@@ -392,6 +427,8 @@ std::string MySerial::ReadLine(size_t max_size, const std::string& eol, std::str
 size_t MySerial::Available(std::string* err) const {
     std::lock_guard<std::mutex> lock(mutex_);
     size_t available = 0;
+    // available() 只查询当前缓冲区，不等待新数据；它不能替代 Read() 的
+    // 超时机制，也不能保证查询后数据仍然未被其他线程读取。
     ExecuteWithError(err, last_error_, [this, &available]() {
         if (!initialized_ || !serial_) {
             throw std::runtime_error("MySerial is not initialized");
@@ -406,6 +443,8 @@ size_t MySerial::Available(std::string* err) const {
 
 std::vector<nlohmann::json> MySerial::ListAvailablePorts() const {
     std::vector<nlohmann::json> ports_json;
+    // 端口枚举不依赖本实例状态，失败行为由底层 serial::list_ports() 决定；
+    // 这里将底层 PortInfo 转成稳定的 JSON 结构，便于直接对外提供。
     for (const auto& port_info : serial::list_ports()) {
         ports_json.push_back({
             {"port", port_info.port},
@@ -419,6 +458,8 @@ std::vector<nlohmann::json> MySerial::ListAvailablePorts() const {
 SerialPortSnapshot MySerial::GetSnapshot() const {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    // 先复制状态，再在端口打开时尝试查询 available。查询失败只影响快照
+    // 中的 last_error，不让诊断接口本身抛出异常。
     SerialPortSnapshot snapshot;
     snapshot.initialized = initialized_;
     snapshot.last_error = last_error_;
@@ -448,6 +489,7 @@ SerialPortSnapshot MySerial::GetSnapshot() const {
 }
 
 nlohmann::json MySerial::GetSnapshotJson() const {
+    // 通过 C++ 快照统一生成 JSON，避免两个状态出口字段不一致。
     const SerialPortSnapshot snapshot = GetSnapshot();
     return {
         {"initialized", snapshot.initialized},
@@ -465,6 +507,8 @@ nlohmann::json MySerial::GetSnapshotJson() const {
 }
 
 SerialSelfCheckResult MySerial::SelfCheck() const {
+    // SelfCheck 同时采集快照和系统端口列表，但 success 的核心判据是实例
+    // 已打开。configured_port_found 作为诊断信息保留，不改变 success 判定。
     SerialSelfCheckResult result;
     result.detail["snapshot"] = GetSnapshotJson();
     result.detail["available_ports"] = ListAvailablePorts();
@@ -499,6 +543,8 @@ SerialSelfCheckResult MySerial::SelfCheck() const {
 }
 
 SerialSelfCheckResult MySerial::SelfTestLoopback(const std::string& payload, size_t read_size) {
+    // 回环测试复用公开的 Write/Read，因此会继承同样的初始化、打开和超时
+    // 规则。read_size=0 表示按 payload 长度读取；对端必须实际回显数据。
     SerialSelfCheckResult result;
     std::string err;
 
@@ -535,6 +581,8 @@ SerialInitOptions MySerial::ParseOptions(const nlohmann::json& cfg) {
         throw std::invalid_argument("serial config must be a json object");
     }
 
+    // 先使用结构体默认值，再逐项覆盖 JSON 字段；未提供的可选项因此保持
+    // eightbits/none/one/none 和 1000ms 等默认配置。
     SerialInitOptions options;
     options.port = GetRequiredPortValue(cfg);
     options.baudrate = GetUint32Value(cfg, {"baudrate", "baud_rate"}, options.baudrate);
@@ -553,6 +601,7 @@ SerialInitOptions MySerial::ParseOptions(const nlohmann::json& cfg) {
 }
 
 serial::bytesize_t MySerial::ParseBytesize(const std::string& value) {
+    // serial 库枚举不能直接从 JSON 使用，集中在这里完成字符串/数字兼容。
     const std::string normalized = NormalizeToken(value);
     if (normalized == "fivebits" || normalized == "5") return serial::fivebits;
     if (normalized == "sixbits" || normalized == "6") return serial::sixbits;
@@ -588,6 +637,7 @@ serial::flowcontrol_t MySerial::ParseFlowcontrol(const std::string& value) {
 }
 
 std::string MySerial::ToString(serial::bytesize_t value) {
+    // ToString() 用于把底层枚举还原为稳定、可序列化的配置文本。
     switch (value) {
         case serial::fivebits: return "fivebits";
         case serial::sixbits: return "sixbits";

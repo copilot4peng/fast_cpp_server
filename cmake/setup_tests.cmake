@@ -6,7 +6,7 @@ print_colored_message("Configuring Unit Tests..." COLOR yellow)
 include(cmake/deps/setup_gtest.cmake)
 
 set(TEST_PROGRAM_NAME ${PROJECT_NAME}_Test)
-file(GLOB_RECURSE TEST_SOURCES "test/*.cpp")
+file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "test/*.cpp")
 
 pretty_print_list("TEST_SOURCES List" TEST_SOURCES)
 
@@ -42,6 +42,7 @@ target_link_libraries(${TEST_PROGRAM_NAME} PRIVATE
     my_mediamtx_monitor
     my_audio
     my_light
+    my_gas_detector_poll
     my_tools
     my_mavsdk
     opencv_core            # 修复 opencv2/opencv.hpp 找不到

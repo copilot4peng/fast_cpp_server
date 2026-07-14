@@ -56,32 +56,13 @@ bool MyAudios::Init(const nlohmann::json& config) {
             const std::string& key = it.key();
             const auto& dev_config = it.value();
 
-            MYLOG_INFO("[MyAudios] --- 正在创建设备: {} ---", key);
-
-            // 获取设备类型
-            std::string type = dev_config.value("type", "audio_server");
-
-            // 创建厂商设备实例
-            auto device = CreateAudioDevice(type);
-            if (!device) {
-                MYLOG_ERROR("[MyAudios] 创建设备失败: 不支持的类型={}, 设备键={}", type, key);
+            if (!AddAudioDevice(key, dev_config)) {
+                MYLOG_ERROR("[MyAudios] 设备添加失败, 设备键={}", key);
                 continue;
+            } else {
+                MYLOG_INFO("[MyAudios] 设备添加成功, 设备键={}", key);
+                success_count++;
             }
-
-            // 初始化设备
-            std::string config_str = dev_config.dump();
-            if (!device->Init(config_str)) {
-                MYLOG_ERROR("[MyAudios] 设备初始化失败, 设备键={}", key);
-                continue;
-            }
-
-            // 使用 device_id 作为索引键
-            std::string device_id = device->GetDeviceId();
-            speakers_[device_id] = device;
-            success_count++;
-
-            MYLOG_INFO("[MyAudios] 设备创建成功: ID={}, 名称={}, 类型={}",
-                       device_id, device->GetName(), type);
         }
 
         initialized_ = true;
@@ -95,6 +76,36 @@ bool MyAudios::Init(const nlohmann::json& config) {
         MYLOG_ERROR("[MyAudios] 初始化异常: {}", e.what());
         return false;
     }
+}
+
+bool MyAudios::AddAudioDevice(const std::string& key, const nlohmann::json& dev_config) {
+    bool status = false;
+    MYLOG_INFO("[MyAudios] --- 正在创建设备: {} ---", key);
+    // 获取设备类型
+    std::string type = dev_config.value("type", "audio_server");
+    // 创建厂商设备实例
+    auto device = CreateAudioDevice(type);
+    if (!device) {
+        MYLOG_ERROR("[MyAudios] 创建设备失败: 不支持的类型={}, 设备键={}", type, key);
+        status = false;
+    } else {
+        MYLOG_INFO("[MyAudios] 设备创建成功: 名称={}, 类型={}", device->GetName(), type);
+        status = true;
+        // 初始化设备
+        std::string config_str = dev_config.dump();
+        if (!device->Init(config_str)) {
+            MYLOG_ERROR("[MyAudios] 设备初始化失败, 设备键={}", key);
+            status = false;
+        } else {
+            MYLOG_INFO("[MyAudios] 设备初始化成功: 名称={}, 类型={}", device->GetName(), type);
+            status = true;
+            // 使用 device_id 作为索引键
+            std::string device_id = device->GetDeviceId();
+            speakers_[device_id] = device;
+            MYLOG_INFO("[MyAudios] 设备添加成功: ID={}, 名称={}, 类型={}", device_id, device->GetName(), type);
+        }
+    }
+    return status;
 }
 
 bool MyAudios::Start() {
@@ -122,8 +133,7 @@ bool MyAudios::Start() {
                    id, AudioStatusToString(device->Status()));
     }
 
-    MYLOG_INFO("[MyAudios] ====== 设备启动完成, 成功={}/{} ======",
-               success_count, speakers_.size());
+    MYLOG_INFO("[MyAudios] ====== 设备启动完成, 成功={}/{} ======", success_count, speakers_.size());
     return success_count > 0;
 }
 

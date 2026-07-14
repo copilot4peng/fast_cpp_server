@@ -1,6 +1,8 @@
 #include "NAudio.h"
+#include "BaseAudio.h"
 #include "MyLog.h"
 #include "PingTools.h"
+#include "MyTimer.h"
 
 #include <chrono>
 #include <nlohmann/json.hpp>
@@ -14,6 +16,8 @@
 
 namespace my_audio {
 
+using namespace DateTimeTools;
+
 // ============================================================================
 // 构造/析构
 // ============================================================================
@@ -21,6 +25,13 @@ namespace my_audio {
 NAudio::NAudio()
     : core_(std::make_unique<NAudioCore>()) {
     MYLOG_INFO("[NAudio] 厂商适配实例已创建");
+    backoff_ = {1, 2, 4, 8, 16, 32, 60};  // 指数避退间隔（秒）
+    std::string backoff_str;
+    for (size_t i = 0; i < backoff_.size(); ++i) {
+        backoff_str += std::to_string(backoff_[i]);
+        if (i < backoff_.size() - 1) backoff_str += ", ";
+    }
+    MYLOG_INFO("[NAudio] 指数避退间隔已设置: {}", backoff_str);
 }
 
 NAudio::~NAudio() {
@@ -114,9 +125,9 @@ bool NAudio::Start() {
     }
 
     // 获取设备信息
-    info_.firmware_version = core_->GetDeviceVersion(sdk_devno_);
-    info_.model = config_.type;
-    info_.serial_number = std::to_string(sdk_devno_);
+    info_.firmware_version  = core_->GetDeviceVersion(sdk_devno_);
+    info_.model             = config_.type;
+    info_.serial_number     = std::to_string(sdk_devno_);
 
     // 设置默认音量
     SetVolume(config_.default_volume);
@@ -124,8 +135,7 @@ bool NAudio::Start() {
     // 在自有线程中启动 AudioLoop 心跳循环
     loop_thread_ = std::thread([this]() { AudioLoop(); });
 
-    MYLOG_INFO("[NAudio] 设备启动完成, 名称={}, 状态={}",
-               config_.name, AudioStatusToString(status_.load()));
+    MYLOG_INFO("[NAudio] 设备启动完成, 名称={}, 状态={}", config_.name, AudioStatusToString(status_.load()));
     return true;
 }
 
@@ -237,7 +247,7 @@ bool NAudio::CheckSelf() {
 
 void NAudio::AudioLoop() {
     MYLOG_INFO("[NAudio] AudioLoop 启动, 设备={}", config_.name);
-
+    timer_.Restart();
     while (!IsStopRequested()) {
         // 先检测设备 IP:Port 的基础联通性，避免 SDK 查询长时间阻塞。
         try {
@@ -279,19 +289,25 @@ void NAudio::AudioLoop() {
             MYLOG_ERROR("[NAudio] AudioLoop 异常: {}, 设备={}", e.what(), config_.name);
         }
 
-        // 每 5 秒更新一次
-        for (int i = 0; i < 5 && !IsStopRequested(); ++i) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            MYLOG_INFO("[NAudio] AudioLoop 心跳, 设备ID={}, IP Ping: {} 当前状态={}, 音量={}",
-                       config_.device_id,
-                       info_.ip_ping_status,
-                       AudioStatusToString(status_.load()),
-                       volume_.load());
+        if (AudioStatus::Offline == status_.load()) {
+            int backoff_time = backoff_[backoff_index_];
+            if (timer_.ElapsedSeconds() >= backoff_time) {
+                MYLOG_INFO("[NAudio] 设备 {} 离线, 等待 {} 秒后重试, 当前状态={}", config_.name, backoff_time, AudioStatusToString(status_.load()));
+                backoff_index_ = std::min(backoff_index_ + 1, static_cast<int>(backoff_.size() - 1));
+                timer_.Restart(false);
+            }
         }
+        if (AudioStatus::Working == status_.load()) {
+            MYLOG_INFO("[NAudio] 设备 {} 在线, 重置避退, 当前状态={}", config_.name, AudioStatusToString(status_.load()));
+            backoff_index_ = 0;
+            timer_.Restart(false);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
     MYLOG_INFO("[NAudio] AudioLoop 已退出, 设备={}, 设备ID={}", config_.name, config_.device_id);
 }
+
 
 // ============================================================================
 // 内部辅助

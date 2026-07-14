@@ -12,9 +12,11 @@
 
 #include "BaseAudio.h"
 #include "NAudioCore/NAudioCore.h"
+#include "MyTimer.h"
 
 #include <thread>
 #include <memory>
+#include <vector>
 
 namespace my_audio {
 
@@ -62,11 +64,14 @@ private:
      */
     void OnPlayStatusChanged(unsigned char scene, unsigned char inst, unsigned int status);
 
-    AudioConfig                     config_;        ///< 设备配置
-    AudioInfo                       info_;          ///< 设备信息
-    std::unique_ptr<NAudioCore>     core_;          ///< SDK 核心封装
-    std::thread                     loop_thread_;   ///< AudioLoop 线程
-    unsigned int                    sdk_devno_{0};  ///< SDK 内部设备编号
+    AudioConfig                     config_;                ///< 设备配置
+    AudioInfo                       info_;                  ///< 设备信息
+    std::unique_ptr<NAudioCore>     core_;                  ///< SDK 核心封装
+    std::thread                     loop_thread_;           ///< AudioLoop 线程
+    unsigned int                    sdk_devno_{0};          ///< SDK 内部设备编号
+    std::vector<int>                backoff_;               ///< 指数避退
+    int                             backoff_index_{0};      ///< 当前避退索引
+    DateTimeTools::Timer            timer_;                 ///< 避退计时器
 };
 
 } // namespace my_audio

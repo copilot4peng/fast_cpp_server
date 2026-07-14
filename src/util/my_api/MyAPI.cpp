@@ -220,7 +220,11 @@ void MyAPI::GenerateStartSettingByPipelineConfig(const nlohmann::json& pipeline_
             }
             ++valid_count;
 
-            MYLOG_INFO("MyAPI: 解析启动项成功, node={}, model_name={}, enable={}", node_key, model_name, enable);
+            // 输出对齐
+            MYLOG_INFO("MyAPI: 解析启动项成功, node={}, enable: {}, model_name={}", 
+                node_key.size() == 1 ? " " + node_key : node_key,
+                enable == true ? "🟢" : "🔴",
+                model_name);
         };
 
         if (executes.is_object()) {
@@ -333,8 +337,8 @@ bool MyAPI::LoadAPIModel(
         controller = my_api::file_cache_api::FileApiController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("audio_server" == model_name) {
-        // MYLOG_INFO("MyAPI: 加载 Audio Server API 模型");
-        // controller = my_api::audio_api::AudioController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        MYLOG_INFO("MyAPI: 加载 Audio Server API 模型");
+        controller = my_api::audio_api::AudioController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("search_light" == model_name) {
         MYLOG_INFO("MyAPI: 加载 Search Light API 模型");

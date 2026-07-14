@@ -114,8 +114,9 @@ void HeartbeatManager::WorkerLoop() {
     while (running_.load()) {
         try {
             BuildHeartbeat();
-            SendHeartbeat(); // log
-            SendOnceByMQTT();      // mqtt publish (if publisher injected)
+            LogHeartbeatData();
+            // SendHeartbeat(); // log
+            // SendOnceByMQTT();      // mqtt publish (if publisher injected)
         } catch (const std::exception& e) {
             MYLOG_ERROR("Heartbeat error: {}", e.what());
         } catch (...) {
@@ -225,6 +226,18 @@ nlohmann::json HeartbeatManager::GetInitConfig() {
     return config_;
 }
 
+void HeartbeatManager::LogHeartbeatData() {
+    nlohmann::json snapshot = GetHeartbeatSnapshot();
+    if (simple_json4log) {
+        if (snapshot.contains("base")) {
+            MYLOG_INFO("Heartbeat(base): {}", snapshot["base"].dump());
+        } else {
+            MYLOG_INFO("Heartbeat: {}", snapshot.dump());
+        }
+    } else {
+        MYLOG_INFO("Heartbeat Data: {}", snapshot.dump(4));
+    }
+}
 void HeartbeatManager::SendHeartbeat() {
     // 仍保留你原来的 log 行为（注意：heartbeat_data_ 结构已变为 {base, extra, edge_*}）
     std::string sender = config_.value("sender", "log");

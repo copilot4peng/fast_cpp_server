@@ -85,7 +85,7 @@
                     }
                 },
                 "model_name": "MQTTBroker",
-                "enable": true,
+                "enable": false,
                 "step_time_interval": 5
             },
             "1": {
@@ -108,7 +108,7 @@
                     "simple_json4log": true
                 },
                 "model_name": "heartbeat",
-                "enable": false,
+                "enable": true,
                 "step_time_interval": 2
             },
             "3": {
@@ -319,11 +319,11 @@
                     "max_retention_seconds": -1
                 },
                 "model_name": "file_cache",
-                "enable": false
+                "enable": true
             },
             "9": {
                 "model_args": {
-                    "audio_count": 2,
+                    "audio_count": 1,
                     "audio_args": {
                         "audio_001": {
                             "name": "audio_server_001",
@@ -336,7 +336,7 @@
                     }
                 },
                 "model_name": "audio_server",
-                "enable": false
+                "enable": true
             },
             "10": {
                 "model_args": {
@@ -373,7 +373,7 @@
                     }
                 },
                 "model_name": "fast_mqtt",
-                "enable": true
+                "enable": false
             },
             "13": {
                 "model_args": {
@@ -392,6 +392,19 @@
             "14": {
                 "model_args": {},
                 "model_name": "2536_comm",
+                "enable": false
+            },
+            "15": {
+                "model_args": {
+                    "enabled": true,
+                    "device": "/dev/ttyUSB0",
+                    "baud_rate": 9600,
+                    "data_bits": 8,
+                    "stop_bits": 1,
+                    "debug_log_enabled": false,
+                    "simulate_mode": false
+                },
+                "model_name": "gas_detector",
                 "enable": true
             }
         }

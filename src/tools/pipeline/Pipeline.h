@@ -59,10 +59,13 @@ private:
     void LaunchAudioServer(const nlohmann::json& args);
     void LaunchSearchLight(const nlohmann::json& args);
     void LaunchAirdropLock(const nlohmann::json& args);
+    void LaunchGasDetector(const nlohmann::json& args);
     
+    bool ModelIsRunning(const std::string& model_name);
     nlohmann::json config_data_;
     std::atomic<bool> is_running_;
     std::vector<std::thread> workers_; // 该变量无用
+    std::vector<std::string> working_models_; // 
 };
 
 } // namespace pipeline

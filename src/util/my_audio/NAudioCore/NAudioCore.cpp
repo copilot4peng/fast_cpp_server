@@ -78,7 +78,7 @@ void NAudioCore::StopServer() {
         return;
     }
 
-    MYLOG_INFO("[NAudioCore] 正在停止音频服务...");
+    MYLOG_INFO("[NAudioCore] 正在停止音频服务; call:na_server_stop()...");
     na_server_stop();
     running_.store(false);
     MYLOG_INFO("[NAudioCore] 音频服务已停止");
