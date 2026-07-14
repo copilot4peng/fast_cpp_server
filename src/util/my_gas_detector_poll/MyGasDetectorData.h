@@ -68,6 +68,10 @@ struct GasDetectorData {
 
     /** @brief 将结果转换成线程安全快照可用的 JSON 对象。 */
     nlohmann::json ToJson() const;
+
+    nlohmann::json ToSimpleCNJson() const;
+
+    nlohmann::json ToSimpleENJson() const;
 };
 
 } // namespace my_gas_detector_poll

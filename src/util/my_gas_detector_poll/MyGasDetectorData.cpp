@@ -1,10 +1,6 @@
 #include "MyGasDetectorData.h"
-#include "MyGasDetectorPollInternal.h"
 
 namespace my_gas_detector_poll {
-
-using namespace detail;
-
 
 GasDetectorData::GasDetectorData()
     : address(0),
@@ -90,6 +86,46 @@ nlohmann::json GasDetectorData::ToJson() const {
         {"timestamp", timestamp},
         {"error", error},
         {"sequence", sequence}
+    };
+}
+
+nlohmann::json GasDetectorData::ToSimpleCNJson() const {
+    return nlohmann::json{
+        {"地址", address},
+        {"数据有效", valid},
+        {"单位", unit},
+        {"小数位", decimal_places},
+        {"当前检测气体浓度", concentration},
+        {"低报警阈值", low_alarm},
+        {"高报警阈值", high_alarm},
+        {"气体量程", range_value},
+        {"传感器工作状态", status},
+        {"传感器工作状态编码", status_register},
+        {"传感器实时AD值", ad_value},
+        {"环境温度值", temperature},
+        {"气体类型编码", gas_code},
+        {"气体类型表", gas},
+        {"环境湿度值", humidity}
+    };
+}
+
+nlohmann::json GasDetectorData::ToSimpleENJson() const {
+    return nlohmann::json{
+        {"address", address},
+        {"data_valid", valid},
+        {"unit", unit},
+        {"decimal_places", decimal_places},
+        {"current_concentration", concentration},
+        {"low_alarm_threshold", low_alarm},
+        {"high_alarm_threshold", high_alarm},
+        {"gas_range", range_value},
+        {"sensor_work_status", status},
+        {"sensor_work_status_code", status_register},
+        {"sensor_realtime_ad_value", ad_value},
+        {"environment_temperature", temperature},
+        {"gas_type_code", gas_code},
+        {"gas_type", gas},
+        {"environment_humidity", humidity}
     };
 }
 

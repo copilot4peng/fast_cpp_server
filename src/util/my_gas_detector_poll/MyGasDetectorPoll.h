@@ -107,6 +107,10 @@ public:
      */
     nlohmann::json Status() const;
 
+    nlohmann::json StatusSimpleCN() const;
+
+    nlohmann::json StatusSimpleEN() const;
+
     /**
      * @brief 获取规范化后的当前配置。
      * @return 返回配置副本；不会返回内部对象引用。

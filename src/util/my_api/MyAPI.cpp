@@ -13,6 +13,7 @@
 
 #include "controller/audio/AudioController.h"
 #include "controller/light/LightController.h"
+#include "controller/gas_detector/GasDetectorController.h"
 #include "controller/airdrop_lock/AirdropLockController.h"
 #include "controller/ip/MyIPController.h"
 #include "controller/demo/edges/EdgesController.hpp"
@@ -343,6 +344,10 @@ bool MyAPI::LoadAPIModel(
     } else if ("search_light" == model_name) {
         MYLOG_INFO("MyAPI: 加载 Search Light API 模型");
         controller = my_api::light_api::LightController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
+        has_model = true;
+    } else if ("gas_detector" == model_name) {
+        MYLOG_INFO("MyAPI: 加载 Gas Detector API 模型");
+        controller = my_api::gas_detector_api::GasDetectorController::createShared(std::static_pointer_cast<oatpp::data::mapping::ObjectMapper>(objectMapper));
         has_model = true;
     } else if ("airdrop_lock" == model_name) {
         MYLOG_INFO("MyAPI: 加载空投锁 API 模型");

@@ -300,6 +300,38 @@ nlohmann::json GasDetectorPoll::Status() const {
     return status;
 }
 
+nlohmann::json GasDetectorPoll::StatusSimpleCN() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    nlohmann::json sensors = nlohmann::json::array();
+    for (std::vector<GasDetectorData>::const_iterator it = latest_results_.begin();
+         it != latest_results_.end(); ++it) {
+        sensors.push_back(it->ToSimpleCNJson());
+    }
+
+    nlohmann::json status;
+    status["工作线程运行"] = running_;
+    status["串口联通"] = serial_.IsOpen() && communication_ok_;
+    status["传感器"] = sensors;
+    return status;
+}
+
+nlohmann::json GasDetectorPoll::StatusSimpleEN() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    nlohmann::json sensors = nlohmann::json::array();
+    for (std::vector<GasDetectorData>::const_iterator it = latest_results_.begin();
+         it != latest_results_.end(); ++it) {
+        sensors.push_back(it->ToSimpleENJson());
+    }
+
+    nlohmann::json status;
+    status["worker_running"] = running_;
+    status["serial_connected"] = serial_.IsOpen() && communication_ok_;
+    status["sensors"] = sensors;
+    return status;
+}
+
 nlohmann::json GasDetectorPoll::GetConfig() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return config_.ToJson();
