@@ -1,5 +1,6 @@
 #include <chrono>
 #include <csignal>
+#include <filesystem>
 #include <iostream>
 #include <map>
 #include <string>
@@ -14,6 +15,7 @@
 #include "MyDoctor.h"
 #include "MyINIConfig.h"
 #include "MyJSONConfig.h"
+#include "MyJSONConfigV2.h"
 #include "MyLog.h"
 #include "Pipeline.h"
 #include "ServiceGuard.h"
@@ -71,6 +73,7 @@ struct BootstrapState {
     bool json_path_from_ini = false;
     bool yaml_path_from_ini = false;
     bool json_loaded = false;
+    bool json_v2_loaded = false;
     bool yaml_loaded = false;
 };
 
@@ -209,15 +212,34 @@ void LoadAllConfigs(BootstrapState& state) {
         state.paths.default_yaml_config_path,
         state.bootstrap_logs);
 
-    state.json_loaded = tools::init_tools::initLoadConfig(
-        "json",
-        state.paths.json_config_path,
-        state.bootstrap_logs);
+    std::string load_json_version = "";
+    MyINIConfig::GetInstance().GetString("load_json_version", "v1", load_json_version);
+    if (load_json_version == "v2") {
+        state.json_v2_loaded = tools::init_tools::initLoadConfig(
+            "jsonV2",
+            state.paths.json_config_path,
+            state.bootstrap_logs);
+    } else {
+        state.json_loaded = tools::init_tools::initLoadConfig(
+            "json",
+            state.paths.json_config_path,
+            state.bootstrap_logs);
+    }
+    // // state.json_loaded = tools::init_tools::initLoadConfig(
+    // //     "json",
+    // //     state.paths.json_config_path,
+    // //     state.bootstrap_logs);
 
-    state.yaml_loaded = tools::init_tools::initLoadConfig(
-        "yaml",
-        state.paths.yaml_config_path,
-        state.bootstrap_logs);
+    // // V2 索引位于旧 JSON 配置目录下的 v2 子目录，单独记录加载结果，避免覆盖 V1 状态。
+    // state.json_loaded = tools::init_tools::initLoadConfig(
+    //     "jsonV2",
+    //     state.paths.json_config_path,
+    //     state.bootstrap_logs);
+
+    // state.yaml_loaded = tools::init_tools::initLoadConfig(
+    //     "yaml",
+    //     state.paths.yaml_config_path,
+    //     state.bootstrap_logs);
 
     AppendBootstrapLog(
         state,
@@ -318,6 +340,7 @@ void LogRuntimeSummary(const BootstrapState& state) {
     MYLOG_INFO("[启动] 默认 YAML 配置路径: {}", state.paths.default_yaml_config_path);
     MYLOG_INFO("[启动] 当前 INI 配置路径: {}", state.paths.ini_config_path);
     MYLOG_INFO("[启动] 当前 JSON 配置路径: {}", state.paths.json_config_path);
+    MYLOG_INFO("[启动] V2 JSON 配置加载状态: {}", state.json_v2_loaded ? "成功" : "失败或未找到");
     MYLOG_INFO("[启动] 当前 YAML 配置路径: {}", state.paths.yaml_config_path);
     MYLOG_INFO("[启动] 当前日志文件路径: {}", state.paths.log_file_path);
     MYLOG_INFO(

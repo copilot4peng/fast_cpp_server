@@ -1,0 +1,76 @@
+{
+    "model_args": {
+        "pod_count": 1,
+        "pod_args": {
+            "pod_001": {
+                "name": "pinling_pod_001",
+                "type": "pinling",
+                "ip": "192.168.2.119",
+                "port": 2000,
+                "rtsp_url": "rtsp://192.168.2.119",
+                "monitor": {
+                    "poll_interval_ms": 500,
+                    "status_interval_ms": 3000,
+                    "ptz_interval_ms": 1000,
+                    "online_window_size": 5,
+                    "online_threshold": 3,
+                    "auto_start": true
+                },
+                "capability": {
+                    "STATUS": {
+                        "open": "enable",
+                        "description": "吊舱状态监测，定期获取吊舱状态信息，如在线状态、云台位置、激光状态等，并发布到MQTT主题"
+                    },
+                    "HEARTBEAT": {
+                        "open": "enable",
+                        "description": "吊舱心跳检测，定期发送心跳信号以确保吊舱在线"
+                    },
+                    "PTZ": {
+                        "open": "enable",
+                        "description": "吊舱云台控制能力（Pan-Tilt-Zoom）",
+                        "init_args": {
+                            "link_type": "tcp",
+                            "ip": "192.168.2.119",
+                            "port": 2000
+                        }
+                    },
+                    "LASER": {
+                        "open": "unable",
+                        "description": "吊舱激光测距能力"
+                    },
+                    "STREAM": {
+                        "open": "enable",
+                        "description": "吊舱流媒体能力",
+                        "init_args": {
+                            "mediamtx_enable": true,
+                            "mediamtx_bin_path": "/home/cs/DockerRoot/fast_cpp_server/source/soft/mediamtx/ubuntu_x86/mediamtx",
+                            "check_ip": "192.168.2.119",
+                            "yaml_file_name": "mediamtx.yaml",
+                            "mediamtx_json_config": {
+                                "rtspAddress": ":8555",
+                                "paths": {
+                                    "live": {
+                                        "source": "rtsp://192.168.2.119",
+                                        "sourceOnDemand": true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "IMAGE": {
+                        "open": "unable",
+                        "description": "吊舱图像处理能力"
+                    },
+                    "CENTER_MEASURE": {
+                        "open": "unable",
+                        "description": "吊舱中心测量能力"
+                    }
+                },
+                "description": "PINLING吊舱,提供视频流和云台控制"
+            }
+        }
+    },
+    "model_name": "pod",
+    "enable": false,
+    "step_time_interval": 2
+}

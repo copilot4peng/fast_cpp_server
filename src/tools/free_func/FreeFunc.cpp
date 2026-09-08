@@ -7,6 +7,7 @@
 #include "FreeFunc.h"
 #include "MyINIConfig.h"
 #include "MyJSONConfig.h"
+#include "MyJSONConfigV2.h"
 #include "MyYAMLConfig.h"
 #include "MyLog.h"
 
@@ -80,6 +81,9 @@ namespace free_func {
             return true;
         } else if (type_ == "json" || type_ == "JSON") {
             MYLOG_INFO("JSON Config:\n{}\n{}\n{}", target_line, MyJSONConfig::GetInstance().ShowConfig(), target_line);
+            return true;
+        } else if (type_ == "jsonV2" || type_ == "JSONV2") {
+            MYLOG_INFO("JSON V2 Config:\n{}\n{}\n{}", target_line, MyJSONConfigV2::GetInstance().ShowConfig(), target_line);
             return true;
         } else if (type_ == "yaml" || type_ == "YAML") {
             MYLOG_INFO("YAML Config:\n{}\n{}\n{}", target_line, MyYAMLConfig::GetInstance().ShowConfig(), target_line);

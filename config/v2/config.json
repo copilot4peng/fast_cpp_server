@@ -1,0 +1,115 @@
+{
+    "server": {
+        "host": "localhost",
+        "port": 9999
+    },
+    "logging": {
+        "file": "test.log",
+        "level": "info"
+    },
+    "my_log_config": {
+        "file_path": "test.log",
+        "level": "info"
+    },
+    "pipeline": {
+        "execute_node_number": 4,
+        "executes": {
+            "0": {
+                "config_name": "MQTTBroker",
+                "config_path": "mqtt_broker.json",
+                "read_config": true,
+                "description": "MQTT Broker 模块"
+            },
+            "1": {
+                "config_name": "mqtt_comm",
+                "config_path": "mqtt_comm.json",
+                "read_config": true,
+                "description": "MQTT 通信模块"
+            },
+            "2": {
+                "config_name": "heartbeat",
+                "config_path": "heartbeat.json",
+                "read_config": true,
+                "description": "心跳检测模块"
+            },
+            "3": {
+                "config_name": "edge",
+                "config_path": "edge.json",
+                "read_config": true,
+                "description": "边缘计算模块"
+            },
+            "4": {
+                "config_name": "soft_healthy_monitor",
+                "config_path": "soft_healthy_monitor.json",
+                "read_config": true,
+                "description": "软件健康监控模块"
+            },
+            "5": {
+                "config_name": "fly_control",
+                "config_path": "fly_control.json",
+                "read_config": true,
+                "description": "飞控模块"
+            },
+            "6": {
+                "config_name": "pod",
+                "config_path": "pod.json",
+                "read_config": true,
+                "description": "Pod 模块"
+            },
+            "7": {
+                "config_name": "mediamtx_monitor",
+                "config_path": "mediamtx_monitor.json",
+                "read_config": true,
+                "description": "MediaMTX 监控模块"
+            },
+            "8": {
+                "config_name": "file_cache",
+                "config_path": "file_cache.json",
+                "read_config": true,
+                "description": "文件缓存模块"
+            },
+            "9": {
+                "config_name": "audio_server",
+                "config_path": "audio_server.json",
+                "read_config": true,
+                "description": "音频服务器模块"
+            },
+            "10": {
+                "config_name": "search_light",
+                "config_path": "search_light.json",
+                "read_config": true,
+                "description": "闪光灯模块"
+            },
+            "11": {
+                "config_name": "rest_api",
+                "config_path": "rest_api.json",
+                "read_config": true,
+                "description": "REST API 模块"
+            },
+            "12": {
+                "config_name": "fast_mqtt",
+                "config_path": "fast_mqtt.json",
+                "read_config": true,
+                "description": "快速 MQTT 模块"
+            },
+            "13": {
+                "config_name": "airdrop_lock",
+                "config_path": "airdrop_lock.json",
+                "read_config": true,
+                "description": "空中下放锁模块"
+            },
+            "14": {
+                "config_name": "2536_comm",
+                "config_path": "2536_comm.json",
+                "read_config": true,
+                "description": "2536 通信模块"
+            },
+            "15": {
+                "config_name": "gas_detector",
+                "config_path": "gas_detector.json",
+                "read_config": true,
+                "description": "气体检测模块"
+            }
+        }
+    }
+}

@@ -3,10 +3,10 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 
-class MyJSONConfig {
+class MyJSONConfigV1 {
 public:
     static void Init(const std::string& path);
-    static MyJSONConfig& GetInstance();
+    static MyJSONConfigV1& GetInstance();
 
     bool Get(const std::string& key,
              const nlohmann::json& def,
@@ -15,13 +15,13 @@ public:
     const nlohmann::json& Raw() const;
     std::string ShowConfig() const;
 
-    bool SetConfig(const nlohmann::json& new_config);
+    nlohmann::json& GetMutableConfig();
 
 private:
-    MyJSONConfig() = default;
+    MyJSONConfigV1() = default;
     bool Load(const std::string& path);
 
-    static MyJSONConfig* instance_;
+    static MyJSONConfigV1* instance_;
     static std::once_flag init_flag_;
 
     nlohmann::json config_;

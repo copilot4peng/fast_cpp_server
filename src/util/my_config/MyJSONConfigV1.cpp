@@ -1,22 +1,22 @@
-#include "MyJSONConfig.h"
+#include "MyJSONConfigV1.h"
 #include <iostream>
 #include <fstream>
 
-MyJSONConfig* MyJSONConfig::instance_ = nullptr;
-std::once_flag MyJSONConfig::init_flag_;
+MyJSONConfigV1* MyJSONConfigV1::instance_ = nullptr;
+std::once_flag MyJSONConfigV1::init_flag_;
 
-void MyJSONConfig::Init(const std::string& path) {
+void MyJSONConfigV1::Init(const std::string& path) {
     std::call_once(init_flag_, [&]() {
-        instance_ = new MyJSONConfig();
+        instance_ = new MyJSONConfigV1();
         instance_->Load(path);
     });
 }
 
-MyJSONConfig& MyJSONConfig::GetInstance() {
+MyJSONConfigV1& MyJSONConfigV1::GetInstance() {
     return *instance_;
 }
 
-bool MyJSONConfig::Load(const std::string& path) {
+bool MyJSONConfigV1::Load(const std::string& path) {
     try {
         std::ifstream ifs(path);
         if (!ifs.is_open()) return false;
@@ -27,7 +27,7 @@ bool MyJSONConfig::Load(const std::string& path) {
     }
 }
 
-bool MyJSONConfig::Get(const std::string& key,
+bool MyJSONConfigV1::Get(const std::string& key,
                        const nlohmann::json& def,
                        nlohmann::json& out) const {
     try {
@@ -37,22 +37,21 @@ bool MyJSONConfig::Get(const std::string& key,
         }
         out = config_[key];
     } catch (...) {
-        std::cout << "[MyJSONConfig] Get key exception: " << key << std::endl;
+        std::cout << "[MyJSONConfigV1] Get key exception: " << key << std::endl;
         out = def;
         return false;
     }
     return true;
 }
 
-const nlohmann::json& MyJSONConfig::Raw() const {
+const nlohmann::json& MyJSONConfigV1::Raw() const {
     return config_;
 }
 
-std::string MyJSONConfig::ShowConfig() const {
+std::string MyJSONConfigV1::ShowConfig() const {
     return config_.dump(2);
 }
 
-bool MyJSONConfig::SetConfig(const nlohmann::json& new_config) {
-    config_ = new_config;
-    return true;
+nlohmann::json& MyJSONConfigV1::GetMutableConfig() {
+    return config_;
 }

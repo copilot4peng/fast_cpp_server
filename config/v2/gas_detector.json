@@ -1,0 +1,13 @@
+{
+    "model_args": {
+        "enabled": true,
+        "device": "/dev/ttyUSB0",
+        "baud_rate": 9600,
+        "data_bits": 8,
+        "stop_bits": 1,
+        "debug_log_enabled": false,
+        "simulate_mode": false
+    },
+    "model_name": "gas_detector",
+    "enable": true
+}

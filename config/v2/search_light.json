@@ -1,0 +1,9 @@
+{
+    "model_args": {
+        "driver": "/dev/ttyUSB0",
+        "baud_rate": 115200
+    },
+    "model_name": "search_light",
+    "description": "A custom light source for your projects.",
+    "enable": false
+}

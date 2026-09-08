@@ -1,0 +1,22 @@
+{
+    "model_args": {
+        "id": "serial0",
+        "enabled": true,
+        "device": "/dev/ttyUSB0",
+        "baud_rate": 115200,
+        "data_bits": 8,
+        "stop_bits": 1,
+        "parity": "none",
+        "flow_control": "none",
+        "read_mode": "blocking",
+        "timeout_ms": 1000,
+        "vmin": 0,
+        "vtime": 10,
+        "raw_mode": true,
+        "dtr_rts": "auto",
+        "mtu": 512,
+        "description": "飞控串口，连接外设飞控，用于模块间消息通信"
+    },
+    "model_name": "fly_control",
+    "enable": false
+}

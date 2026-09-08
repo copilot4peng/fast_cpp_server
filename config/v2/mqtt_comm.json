@@ -1,0 +1,14 @@
+{
+    "model_args": {
+       "host":"127.0.0.1",
+       "port":1883,
+       "keepalive":60,
+       "client_id":"app_01",
+       "clean_session":true,
+       "username":"", "password":"",
+       "reconnect": { "min_sec":2, "max_sec":32 }
+     },
+    "model_name": "mqtt_comm",
+    "enable": false,
+    "step_time_interval": 5
+}

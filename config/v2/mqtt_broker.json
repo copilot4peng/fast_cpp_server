@@ -1,0 +1,43 @@
+{
+    "model_args": {
+        "enable": true,
+        "broker": {
+            "port": 1883,
+            "bin": "/home/peng/Code/fast_cpp_server/build/bin/mosquitto",
+            "config": "/home/peng/Code/fast_cpp_server/config/mosquitto.conf",
+            "log": "/home/peng/Code/fast_cpp_server/mosquitto.log",
+            "foreground": true
+        },
+        "broker_docker": {
+            "port": 1883,
+            "bin": "/workspace/build/bin/mosquitto",
+            "config": "/workspace/config/mosquitto.conf",
+            "log": "/workspace/mosquitto.log",
+            "foreground": true
+        },
+        "broker_linux": {
+            "port": 1883,
+            "bin": "/home/cs/DockerRoot/fast_cpp_server/build/bin/mosquitto",
+            "config": "/home/cs/DockerRoot/fast_cpp_server/config/mosquitto.conf",
+            "log": "/home/cs/DockerRoot/fast_cpp_server/mosquitto.log",
+            "foreground": true
+        },
+        "broker_home": {
+            "port": 1883,
+            "bin": "/home/peng/Code/fast_cpp_server/build/bin/mosquitto",
+            "config": "/home/peng/Code/fast_cpp_server/config/mosquitto.conf",
+            "log": "/home/peng/Code/fast_cpp_server/mosquitto.log",
+            "foreground": true
+        },
+        "broker_pro": {
+            "port": 1883,
+            "bin": "/usr/local/bin/fast_cpp_server_dir/mosquitto",
+            "config": "/etc/fast_cpp_server/mosquitto.conf",
+            "log": "/var/fast_cpp_server/logs/mosquitto.log",
+            "foreground": true
+        }
+    },
+    "model_name": "MQTTBroker",
+    "enable": false,
+    "step_time_interval": 5
+}

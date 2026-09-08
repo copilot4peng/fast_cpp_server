@@ -1,0 +1,14 @@
+{
+    "model_args": {
+        "enabled": true,
+        "device": "/dev/ttyUSB0",
+        "baud_rate": 9600,
+        "data_bits": 8,
+        "stop_bits": 1,
+        "default_PWM_frequency": "50",
+        "open_cmd": "D005",
+        "lock_cmd": "D010"
+    },
+    "model_name": "airdrop_lock",
+    "enable": false
+}

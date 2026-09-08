@@ -1,0 +1,19 @@
+{
+    "model_args": {
+        "mediamtx_enable": true,
+        "mediamtx_bin_path": "/home/cs/DockerRoot/fast_cpp_server/source/soft/mediamtx/ubuntu_x86/mediamtx",
+        "check_ip": "192.168.2.119",
+        "yaml_file_name": "mediamtx.yml",
+        "mediamtx_json_config": {
+            "rtspAddress": "8555",
+            "paths": {
+                "live": {
+                    "source": "rtsp://192.168.2.119",
+                    "sourceOnDemand": true
+                }
+            }
+        }
+    },
+    "model_name": "mediamtx_monitor",
+    "enable": false
+}

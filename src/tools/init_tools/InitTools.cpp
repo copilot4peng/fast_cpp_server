@@ -7,8 +7,28 @@
 #include "InitTools.h"
 #include "MyINIConfig.h"
 #include "MyJSONConfig.h"
+#include "MyJSONConfigV1.h"
+#include "MyJSONConfigV2.h"
 #include "MyYAMLConfig.h"
 
+namespace {
+    bool tryLoadConfig(const std::string& name,
+                       const std::string& config_file_path,
+                       void (*initFunc)(const std::string&),
+                       std::vector<std::string>& logInfos) {
+        try {
+            initFunc(config_file_path);
+            logInfos.emplace_back("[Config] " + name + " 配置加载成功");
+            std::cout << "[" << name << "] Config Loaded Successfully." << std::endl;
+            return true;
+        } catch (const std::exception& e) {
+            logInfos.emplace_back("[Config] " + name + " 配置加载失败: " + e.what());
+        } catch (...) {
+            logInfos.emplace_back("[Config] " + name + " 配置加载失败: unknown exception");
+        }
+        return false;
+    }
+}
 
 namespace tools {
 namespace init_tools {  
@@ -55,46 +75,41 @@ namespace init_tools {
             logInfos.emplace_back("[Config] ❌ 配置文件不存在: " + config_file_path + "，跳过 " + type_ + " 配置加载");
             return false;
         }
-        auto tryLoad = [&](const std::string& name, auto&& initFunc, auto&& showFunc) -> bool {
-            try {
-                initFunc();
-                logInfos.emplace_back("[Config] " + name + " 配置加载成功");
-                std::cout << "[" << name << "] Config Loaded Successfully." << std::endl;
-                // std::cout << showFunc() << std::endl;
-                return true;
-            } catch (const std::exception& e) {
-                logInfos.emplace_back("[Config] " + name + " 配置加载失败: " + e.what());
-            } catch (...) {
-                logInfos.emplace_back("[Config] " + name + " 配置加载失败: unknown exception");
-            }
-            return false;
-        };
         std::cout << "config_file_path: " << config_file_path << std::endl;
         // ========== INI ==========
         if (type_ == "ini" || type_ == "all") {
-            load_ok |= tryLoad(
-                "INI",
-                [&]() { MyINIConfig::Init(config_file_path); },
-                [&]() { return MyINIConfig::GetInstance().ShowConfig(); }
-            );
+            load_ok |= tryLoadConfig("INI", config_file_path, &MyINIConfig::Init, logInfos);
         }
 
         // ========== JSON ==========
         if (type_ == "json" || type_ == "all") {
-            load_ok |= tryLoad(
-                "JSON",
-                [&]() { MyJSONConfig::Init(config_file_path); },
-                [&]() { return MyJSONConfig::GetInstance().ShowConfig(); }
-            );
+            load_ok |= tryLoadConfig("JSON", config_file_path, &MyJSONConfigV1::Init, logInfos);
+            if (!load_ok) {
+                logInfos.emplace_back("[Config] ❌ JSON 配置加载失败");
+            } else {
+                logInfos.emplace_back("[Config] ✅ JSON 配置加载成功");
+                MyJSONConfig::Init(config_file_path);
+                MyJSONConfig::GetInstance().SetConfig(MyJSONConfigV1::GetInstance().GetMutableConfig());
+                logInfos.emplace_back("[Config] ✅ JSON 配置已更新为 V1 配置");
+            }
+        }
+
+        // ========== JSONV2 ==========
+        if (type_ == "jsonV2" || type_ == "all") {
+            load_ok |= tryLoadConfig("JSONV2", config_file_path, &MyJSONConfigV2::Init, logInfos);
+            if (!load_ok) {
+                logInfos.emplace_back("[Config] ❌ JSON 配置加载失败");
+            } else {
+                logInfos.emplace_back("[Config] ✅ JSON 配置加载成功");
+                MyJSONConfig::Init(config_file_path);
+                MyJSONConfig::GetInstance().SetConfig(MyJSONConfigV2::GetInstance().GetMutableConfig());
+                logInfos.emplace_back("[Config] ✅ JSON 配置已更新为 V2 配置");
+            }
         }
 
         // ========== YAML ==========
         if (type_ == "yaml" || type_ == "all") {
-            load_ok |= tryLoad(
-                "YAML",
-                [&]() { MyYAMLConfig::Init(config_file_path); },
-                [&]() { return MyYAMLConfig::GetInstance().ShowConfig(); }
-            );
+            load_ok |= tryLoadConfig("YAML", config_file_path, &MyYAMLConfig::Init, logInfos);
         }
 
         if (!load_ok) {

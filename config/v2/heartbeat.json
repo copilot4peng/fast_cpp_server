@@ -1,0 +1,9 @@
+{
+    "model_args": {
+        "interval_sec": 1,
+        "simple_json4log": true
+    },
+    "model_name": "heartbeat",
+    "enable": true,
+    "step_time_interval": 2
+}

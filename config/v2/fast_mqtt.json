@@ -1,0 +1,21 @@
+{
+    "model_args": {
+        "broker": {
+            "host": "127.0.0.1",
+            "port": 1883,
+            "client_id": "launcher_001",
+            "keep_alive": 60,
+            "auto_reconnect": true
+        },
+        "thread": {
+            "send_queue_size": 1000,
+            "recv_queue_size": 1000
+        },
+        "default": {
+            "qos": 1,
+            "retain": false
+        }
+    },
+    "model_name": "fast_mqtt",
+    "enable": false
+}

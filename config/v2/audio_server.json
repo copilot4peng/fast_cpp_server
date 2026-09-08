@@ -1,0 +1,17 @@
+{
+    "model_args": {
+        "audio_count": 1,
+        "audio_args": {
+            "audio_001": {
+                "name": "audio_server_001",
+                "type": "audio_server",
+                "ip": "192.168.1.150",
+                "port": 8890,
+                "device_id": 3445,
+                "master_ip": "192.168.1.250"
+            }
+        }
+    },
+    "model_name": "audio_server",
+    "enable": true
+}

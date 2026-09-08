@@ -1,0 +1,7 @@
+{
+    "model_args": {
+        "port": 9995
+    },
+    "model_name": "rest_api",
+    "enable": true
+}
